@@ -14,7 +14,264 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      action_steps: {
+        Row: {
+          completed: boolean
+          content: string
+          created_at: string
+          id: string
+          order_index: number
+          user_id: string
+          week_label: string
+        }
+        Insert: {
+          completed?: boolean
+          content: string
+          created_at?: string
+          id?: string
+          order_index?: number
+          user_id: string
+          week_label: string
+        }
+        Update: {
+          completed?: boolean
+          content?: string
+          created_at?: string
+          id?: string
+          order_index?: number
+          user_id?: string
+          week_label?: string
+        }
+        Relationships: []
+      }
+      comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      milestone_tasks: {
+        Row: {
+          completed: boolean
+          created_at: string
+          id: string
+          milestone_id: string
+          order_index: number
+          title: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          id?: string
+          milestone_id: string
+          order_index?: number
+          title: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          id?: string
+          milestone_id?: string
+          order_index?: number
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milestone_tasks_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "milestones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      milestones: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          order_index: number
+          status: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_index?: number
+          status?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_index?: number
+          status?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      post_likes: {
+        Row: {
+          created_at: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      posts: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          topic: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          topic: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          topic?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          career_goal: string | null
+          created_at: string
+          id: string
+          industry: string | null
+          linkedin_url: string | null
+          name: string | null
+          role: string | null
+          updated_at: string
+          years_experience: number | null
+        }
+        Insert: {
+          career_goal?: string | null
+          created_at?: string
+          id: string
+          industry?: string | null
+          linkedin_url?: string | null
+          name?: string | null
+          role?: string | null
+          updated_at?: string
+          years_experience?: number | null
+        }
+        Update: {
+          career_goal?: string | null
+          created_at?: string
+          id?: string
+          industry?: string | null
+          linkedin_url?: string | null
+          name?: string | null
+          role?: string | null
+          updated_at?: string
+          years_experience?: number | null
+        }
+        Relationships: []
+      }
+      videos: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration: string | null
+          guest_name: string
+          guest_role: string | null
+          id: string
+          is_featured: boolean
+          thumbnail_url: string | null
+          title: string
+          topic: string
+          youtube_url: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration?: string | null
+          guest_name: string
+          guest_role?: string | null
+          id?: string
+          is_featured?: boolean
+          thumbnail_url?: string | null
+          title: string
+          topic: string
+          youtube_url: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration?: string | null
+          guest_name?: string
+          guest_role?: string | null
+          id?: string
+          is_featured?: boolean
+          thumbnail_url?: string | null
+          title?: string
+          topic?: string
+          youtube_url?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
