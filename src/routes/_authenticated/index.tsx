@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Heart, MessageCircle, Repeat2, Share2, Sparkles, TrendingUp, Clock, LogOut, Loader2, Send } from "lucide-react";
+import { Heart, MessageCircle, Repeat2, Share2, Sparkles, TrendingUp, Clock, LogOut, Loader2, Send, Users, UserPlus, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNowStrict } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -24,6 +24,7 @@ const TAGS = ["Promotions","Visibility","Networking","Interviews","Office Politi
 const FILTERS = [
   { id: "trending", label: "Trending", icon: TrendingUp },
   { id: "newest", label: "Newest", icon: Clock },
+  { id: "following", label: "Following", icon: Users },
 ] as const;
 
 type Post = {
@@ -45,7 +46,7 @@ function initials(name?: string | null) {
 function Home() {
   const { user, signOut } = useAuth();
   const qc = useQueryClient();
-  const [filter, setFilter] = useState<"trending" | "newest">("newest");
+  const [filter, setFilter] = useState<"trending" | "newest" | "following">("newest");
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [composer, setComposer] = useState("");
   const [composerTopic, setComposerTopic] = useState<string>(TAGS[0]);
@@ -118,13 +119,44 @@ function Home() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["posts"] }),
     onError: (e: Error) => toast.error(e.message),
   });
+  const followingQuery = useQuery({
+    queryKey: ["following", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("follows").select("following_id").eq("follower_id", user!.id);
+      if (error) throw error;
+      return new Set((data ?? []).map((f) => f.following_id));
+    },
+  });
+
+  const toggleFollow = useMutation({
+    mutationFn: async ({ targetId, following }: { targetId: string; following: boolean }) => {
+      if (!user) throw new Error("Not signed in");
+      if (following) {
+        const { error } = await supabase.from("follows").delete().eq("follower_id", user.id).eq("following_id", targetId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("follows").insert({ follower_id: user.id, following_id: targetId });
+        if (error) throw error;
+      }
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["following"] });
+      toast.success(vars.following ? "Unfollowed" : "Followed");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const visible = useMemo(() => {
     let list = postsQuery.data ?? [];
     if (activeTag) list = list.filter((p) => p.topic === activeTag);
+    if (filter === "following") {
+      const set = followingQuery.data ?? new Set<string>();
+      list = list.filter((p) => set.has(p.user_id));
+    }
     if (filter === "trending") list = [...list].sort((a, b) => (b.likes + b.comments) - (a.likes + a.comments));
     return list;
-  }, [postsQuery.data, filter, activeTag]);
+  }, [postsQuery.data, filter, activeTag, followingQuery.data]);
 
   return (
     <div className="min-h-screen pb-28">
@@ -240,6 +272,22 @@ function Home() {
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="font-semibold text-sm">{p.profile?.name ?? "Member"}</span>
                     <span className="text-xs text-muted-foreground">· {formatDistanceToNowStrict(new Date(p.created_at))} ago</span>
+                    {user && p.user_id !== user.id && (() => {
+                      const isFollowing = followingQuery.data?.has(p.user_id) ?? false;
+                      return (
+                        <button
+                          onClick={() => toggleFollow.mutate({ targetId: p.user_id, following: isFollowing })}
+                          className={cn(
+                            "ml-auto flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors",
+                            isFollowing
+                              ? "bg-card border border-border/60 text-muted-foreground hover:text-foreground"
+                              : "brand-gradient text-white shadow-sm shadow-primary/30",
+                          )}
+                        >
+                          {isFollowing ? <><UserCheck className="h-3 w-3" /> Following</> : <><UserPlus className="h-3 w-3" /> Follow</>}
+                        </button>
+                      );
+                    })()}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {p.profile?.role ?? "Early-career professional"}
