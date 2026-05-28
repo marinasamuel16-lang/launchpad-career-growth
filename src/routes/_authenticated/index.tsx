@@ -24,6 +24,7 @@ const TAGS = ["Promotions","Visibility","Networking","Interviews","Office Politi
 const FILTERS = [
   { id: "trending", label: "Trending", icon: TrendingUp },
   { id: "newest", label: "Newest", icon: Clock },
+  { id: "following", label: "Following", icon: Users },
 ] as const;
 
 type Post = {
