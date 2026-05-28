@@ -46,7 +46,7 @@ function initials(name?: string | null) {
 function Home() {
   const { user, signOut } = useAuth();
   const qc = useQueryClient();
-  const [filter, setFilter] = useState<"trending" | "newest">("newest");
+  const [filter, setFilter] = useState<"trending" | "newest" | "following">("newest");
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [composer, setComposer] = useState("");
   const [composerTopic, setComposerTopic] = useState<string>(TAGS[0]);
