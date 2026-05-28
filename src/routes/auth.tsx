@@ -93,9 +93,7 @@ function AuthPage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
-          <div className="brand-gradient inline-flex h-12 w-12 items-center justify-center rounded-2xl shadow-lg shadow-primary/30">
-            <Sparkles className="h-6 w-6 text-white" />
-          </div>
+          <img src={logo} alt="LaunchPad EIC logo" className="mx-auto h-20 w-auto object-contain" />
           <h1 className="text-2xl font-bold">
             LaunchPad <span className="brand-gradient-text">EIC</span>
           </h1>
