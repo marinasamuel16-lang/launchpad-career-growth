@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BottomNav } from "@/components/BottomNav";
 import { useAuth } from "@/hooks/use-auth";
+import logo from "@/assets/logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -163,9 +164,7 @@ function Home() {
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            <div className="brand-gradient flex h-9 w-9 items-center justify-center rounded-xl shadow-md shadow-primary/30">
-              <Sparkles className="h-5 w-5 text-white" />
-            </div>
+            <img src={logo} alt="LaunchPad EIC" className="h-10 w-auto object-contain" />
             <h1 className="text-lg font-bold tracking-tight">
               LaunchPad <span className="brand-gradient-text">EIC</span>
             </h1>
