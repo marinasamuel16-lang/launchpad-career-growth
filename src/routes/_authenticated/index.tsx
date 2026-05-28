@@ -272,6 +272,22 @@ function Home() {
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="font-semibold text-sm">{p.profile?.name ?? "Member"}</span>
                     <span className="text-xs text-muted-foreground">· {formatDistanceToNowStrict(new Date(p.created_at))} ago</span>
+                    {user && p.user_id !== user.id && (() => {
+                      const isFollowing = followingQuery.data?.has(p.user_id) ?? false;
+                      return (
+                        <button
+                          onClick={() => toggleFollow.mutate({ targetId: p.user_id, following: isFollowing })}
+                          className={cn(
+                            "ml-auto flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors",
+                            isFollowing
+                              ? "bg-card border border-border/60 text-muted-foreground hover:text-foreground"
+                              : "brand-gradient text-white shadow-sm shadow-primary/30",
+                          )}
+                        >
+                          {isFollowing ? <><UserCheck className="h-3 w-3" /> Following</> : <><UserPlus className="h-3 w-3" /> Follow</>}
+                        </button>
+                      );
+                    })()}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {p.profile?.role ?? "Early-career professional"}
