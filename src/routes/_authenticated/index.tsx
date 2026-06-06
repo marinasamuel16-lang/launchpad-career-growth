@@ -56,6 +56,33 @@ function Home() {
   const [composer, setComposer] = useState("");
   const [composerTopic, setComposerTopic] = useState<string>(TAGS[0]);
   const [openComments, setOpenComments] = useState<string | null>(null);
+  const [levelUp, setLevelUp] = useState<number | null>(null);
+
+  const profileQuery = useQuery({
+    queryKey: ["profile", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("xp, streak_days, last_active_on").eq("id", user!.id).maybeSingle();
+      return data;
+    },
+  });
+
+  const dailyCheckin = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("Not signed in");
+      return awardXp({ userId: user.id, kind: "daily_checkin" });
+    },
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["profile"] });
+      toast.success(`+5 XP · ${res.newStreak}-day streak 🔥`);
+      if (res.leveledUp) setLevelUp(res.newLevel);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const checkedInToday = profileQuery.data?.last_active_on === todayISO();
+  const streakDays = profileQuery.data?.streak_days ?? 0;
+
 
   const postsQuery = useQuery({
     queryKey: ["posts", user?.id],
