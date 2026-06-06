@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Heart, MessageCircle, Repeat2, Share2, Sparkles, TrendingUp, Clock, LogOut, Loader2, Send, Users, UserPlus, UserCheck } from "lucide-react";
+import { Heart, MessageCircle, Repeat2, Share2, Sparkles, TrendingUp, Clock, LogOut, Loader2, Send, Users, UserPlus, UserCheck, Flame } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNowStrict } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -12,10 +12,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BottomNav } from "@/components/BottomNav";
+import { NotificationsBell } from "@/components/NotificationsBell";
+import { LevelUpModal } from "@/components/LevelUpModal";
 import { useAuth } from "@/hooks/use-auth";
 import logo from "@/assets/logo.png";
 import { supabase } from "@/integrations/supabase/client";
+import { awardXp, todayISO } from "@/lib/gamification";
 import { cn } from "@/lib/utils";
+
 
 export const Route = createFileRoute("/_authenticated/")({
   component: Home,
