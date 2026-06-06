@@ -200,13 +200,45 @@ function Home() {
               LaunchPad <span className="brand-gradient-text">EIC</span>
             </h1>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => signOut()} className="gap-1.5 text-xs">
-            <LogOut className="h-3.5 w-3.5" /> Sign out
-          </Button>
+          <div className="flex items-center gap-1">
+            <NotificationsBell />
+            <Button variant="ghost" size="sm" onClick={() => signOut()} className="gap-1.5 text-xs">
+              <LogOut className="h-3.5 w-3.5" /> Sign out
+            </Button>
+          </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-2xl px-4 py-4 space-y-4">
+        {user && (
+          <button
+            type="button"
+            disabled={checkedInToday || dailyCheckin.isPending}
+            onClick={() => dailyCheckin.mutate()}
+            className={cn(
+              "w-full flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 transition-all text-left",
+              checkedInToday
+                ? "bg-amber-500/10 border-amber-500/30"
+                : "brand-gradient text-white border-transparent shadow-md shadow-primary/30 hover:scale-[1.01]",
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <Flame className={cn("h-5 w-5", checkedInToday ? "text-amber-600" : "text-white")} />
+              <div>
+                <p className={cn("text-sm font-semibold", checkedInToday ? "text-amber-700 dark:text-amber-400" : "text-white")}>
+                  {checkedInToday ? `${streakDays}-day streak` : "Check in for today"}
+                </p>
+                <p className={cn("text-[11px]", checkedInToday ? "text-amber-700/70 dark:text-amber-400/70" : "text-white/80")}>
+                  {checkedInToday ? "Come back tomorrow to keep it going" : "+5 XP and grow your streak"}
+                </p>
+              </div>
+            </div>
+            {!checkedInToday && (
+              <span className="text-xs font-semibold bg-white/20 rounded-full px-3 py-1">+5 XP</span>
+            )}
+          </button>
+        )}
+
         <Card className="p-4 shadow-sm">
           <div className="flex gap-3">
             <Avatar className="h-10 w-10">
