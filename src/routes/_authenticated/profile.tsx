@@ -1,13 +1,14 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import {
   Check, CheckCircle2, Circle, Award, Target, Sparkles, Briefcase, TrendingUp,
-  Calendar, Edit3, Plus, Trash2, Loader2, LogOut,
+  Calendar, Edit3, Plus, Trash2, Loader2, LogOut, Flame, Wand2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -18,8 +19,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BottomNav } from "@/components/BottomNav";
+import { NotificationsBell } from "@/components/NotificationsBell";
+import { AvatarUpload, getAvatarSignedUrl } from "@/components/AvatarUpload";
+import { LevelUpModal } from "@/components/LevelUpModal";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { awardXp, levelForXp, progressToNextLevel } from "@/lib/gamification";
+import { generateRoadmap } from "@/lib/ai-coach.functions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/profile")({
@@ -29,6 +35,7 @@ export const Route = createFileRoute("/_authenticated/profile")({
 type Profile = {
   id: string; name: string | null; role: string | null; industry: string | null;
   years_experience: number | null; career_goal: string | null; linkedin_url: string | null;
+  avatar_url: string | null; xp: number; streak_days: number; last_active_on: string | null;
 };
 type Milestone = { id: string; title: string; description: string | null; status: "done" | "current" | "upcoming"; order_index: number };
 type Task = { id: string; milestone_id: string; title: string; completed: boolean; order_index: number };
@@ -46,9 +53,14 @@ const profileSchema = z.object({
 function Profile() {
   const { user, signOut } = useAuth();
   const qc = useQueryClient();
+  const nav = useNavigate();
   const [editProfile, setEditProfile] = useState(false);
   const [addMilestoneOpen, setAddMilestoneOpen] = useState(false);
   const [addStepOpen, setAddStepOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [levelUp, setLevelUp] = useState<number | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
+  const generateFn = useServerFn(generateRoadmap);
 
   const profileQuery = useQuery({
     queryKey: ["profile", user?.id],
@@ -56,7 +68,7 @@ function Profile() {
     queryFn: async (): Promise<Profile | null> => {
       const { data, error } = await supabase.from("profiles").select("*").eq("id", user!.id).maybeSingle();
       if (error) throw error;
-      return data;
+      return data as Profile | null;
     },
   });
 
@@ -116,6 +128,22 @@ function Profile() {
   const current = milestones.find((m) => m.status === "current");
   const next = milestones.find((m) => m.status === "upcoming");
 
+  // Load avatar signed URL
+  useEffect(() => {
+    if (!profile?.avatar_url) { setAvatarUrl(null); return; }
+    getAvatarSignedUrl(profile.avatar_url).then(setAvatarUrl);
+  }, [profile?.avatar_url]);
+
+  // First-time users → onboarding
+  useEffect(() => {
+    if (profile && !profile.name) nav({ to: "/onboarding" });
+  }, [profile, nav]);
+
+  async function handleLevelCheck(res: { leveledUp: boolean; newLevel: number }) {
+    qc.invalidateQueries({ queryKey: ["profile"] });
+    if (res.leveledUp) setLevelUp(res.newLevel);
+  }
+
   const saveProfile = useMutation({
     mutationFn: async (form: FormData) => {
       if (!user) throw new Error("Not signed in");
@@ -152,29 +180,49 @@ function Profile() {
 
   const toggleTask = useMutation({
     mutationFn: async (task: Task) => {
-      const { error } = await supabase.from("milestone_tasks").update({ completed: !task.completed }).eq("id", task.id);
+      if (!user) throw new Error("Not signed in");
+      const willComplete = !task.completed;
+      const { error } = await supabase.from("milestone_tasks").update({ completed: willComplete }).eq("id", task.id);
       if (error) throw error;
 
       // Recompute milestone status based on its tasks
       const milestone = milestones.find((m) => m.id === task.milestone_id);
       if (!milestone) return { earned: false };
       const siblings = (tasksByMilestone.get(task.milestone_id) ?? []).map((t) =>
-        t.id === task.id ? { ...t, completed: !task.completed } : t,
+        t.id === task.id ? { ...t, completed: willComplete } : t,
       );
       const allDone = siblings.length > 0 && siblings.every((t) => t.completed);
       const wasDone = milestone.status === "done";
       const nextStatus: Milestone["status"] = allDone ? "done" : "current";
       if (milestone.status !== nextStatus) {
-        const { error: mErr } = await supabase
-          .from("milestones").update({ status: nextStatus }).eq("id", milestone.id);
-        if (mErr) throw mErr;
+        await supabase.from("milestones").update({ status: nextStatus }).eq("id", milestone.id);
       }
-      return { earned: allDone && !wasDone, title: milestone.title };
+
+      // XP: award when task is checked off (not on uncheck)
+      let levelRes: { leveledUp: boolean; newLevel: number; newXp: number; streakIncreased: boolean; newStreak: number } | null = null;
+      if (willComplete) {
+        levelRes = await awardXp({ userId: user.id, kind: "task", referenceId: task.id });
+      }
+      // Milestone earned
+      const earned = allDone && !wasDone;
+      if (earned) {
+        const ms = await awardXp({ userId: user.id, kind: "milestone", referenceId: milestone.id });
+        if (ms.leveledUp) levelRes = ms;
+        await supabase.from("notifications").insert({
+          user_id: user.id,
+          actor_id: user.id,
+          type: "milestone_earned",
+          data: { title: milestone.title },
+        });
+      }
+      return { earned, title: milestone.title, levelRes };
     },
-    onSuccess: (res) => {
+    onSuccess: async (res) => {
       qc.invalidateQueries({ queryKey: ["milestone_tasks"] });
       qc.invalidateQueries({ queryKey: ["milestones"] });
+      qc.invalidateQueries({ queryKey: ["profile"] });
       if (res?.earned) toast.success(`Milestone earned: ${res.title} 🏆`);
+      if (res?.levelRes?.leveledUp) setLevelUp(res.levelRes.newLevel);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -234,10 +282,21 @@ function Profile() {
 
   const toggleStep = useMutation({
     mutationFn: async (s: ActionStep) => {
-      const { error } = await supabase.from("action_steps").update({ completed: !s.completed }).eq("id", s.id);
+      if (!user) throw new Error("Not signed in");
+      const willComplete = !s.completed;
+      const { error } = await supabase.from("action_steps").update({ completed: willComplete }).eq("id", s.id);
       if (error) throw error;
+      if (willComplete) {
+        const r = await awardXp({ userId: user.id, kind: "step", referenceId: s.id });
+        return r;
+      }
+      return null;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["action_steps"] }),
+    onSuccess: async (res) => {
+      qc.invalidateQueries({ queryKey: ["action_steps"] });
+      qc.invalidateQueries({ queryKey: ["profile"] });
+      if (res?.leveledUp) setLevelUp(res.newLevel);
+    },
   });
 
   const deleteStep = useMutation({
@@ -248,10 +307,20 @@ function Profile() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["action_steps"] }),
   });
 
-  // Prompt new users with empty name to complete profile
-  useEffect(() => {
-    if (profile && !profile.name) setEditProfile(true);
-  }, [profile]);
+  const regenerate = async () => {
+    if (!confirm("This will replace your current roadmap with a new AI-generated one. Continue?")) return;
+    setRegenerating(true);
+    try {
+      await generateFn();
+      qc.invalidateQueries({ queryKey: ["milestones"] });
+      qc.invalidateQueries({ queryKey: ["milestone_tasks"] });
+      toast.success("New roadmap ready!");
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed");
+    } finally {
+      setRegenerating(false);
+    }
+  };
 
   if (profileQuery.isLoading) {
     return (
@@ -262,13 +331,18 @@ function Profile() {
   }
 
   const initials = (profile?.name || user?.email || "?").split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
+  const xp = profile?.xp ?? 0;
+  const lvl = levelForXp(xp);
+  const lvlProgress = progressToNextLevel(xp);
+  const streak = profile?.streak_days ?? 0;
 
   return (
     <div className="min-h-screen pb-28">
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
           <h1 className="text-lg font-bold tracking-tight">Your Career Roadmap</h1>
-          <div className="flex gap-1">
+          <div className="flex items-center gap-1">
+            <NotificationsBell />
             <Button variant="outline" size="sm" className="rounded-full gap-1.5" onClick={() => setEditProfile(true)}>
               <Edit3 className="h-3.5 w-3.5" /> Edit
             </Button>
@@ -283,9 +357,26 @@ function Profile() {
         <Card className="overflow-hidden shadow-sm">
           <div className="brand-gradient h-20" />
           <div className="px-5 pb-5 -mt-10">
-            <Avatar className="h-20 w-20 border-4 border-card shadow-md">
-              <AvatarFallback className="brand-gradient text-white font-bold text-xl">{initials}</AvatarFallback>
-            </Avatar>
+            <div className="flex items-end justify-between">
+              {user && (
+                <AvatarUpload
+                  userId={user.id}
+                  url={avatarUrl}
+                  initials={initials}
+                  onUploaded={(u) => { setAvatarUrl(u); qc.invalidateQueries({ queryKey: ["profile"] }); }}
+                />
+              )}
+              <div className="flex items-center gap-2 mb-1">
+                {streak > 0 && (
+                  <Badge className="rounded-full bg-amber-500/15 text-amber-600 border-0 gap-1">
+                    <Flame className="h-3 w-3" /> {streak}d streak
+                  </Badge>
+                )}
+                <Badge className="rounded-full brand-gradient text-white border-0 gap-1">
+                  <Sparkles className="h-3 w-3" /> Level {lvl}
+                </Badge>
+              </div>
+            </div>
             <div className="mt-3">
               <h2 className="text-xl font-bold">{profile?.name || "Add your name"}</h2>
               <p className="text-sm text-muted-foreground">
@@ -298,12 +389,22 @@ function Profile() {
                 </a>
               )}
             </div>
-            <div className="mt-4 space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-medium">Roadmap progress</span>
-                <span className="text-muted-foreground">{progress}%</span>
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="font-medium">XP — Level {lvl}</span>
+                  <span className="text-muted-foreground">{xp} / {lvlProgress.next} XP</span>
+                </div>
+                <Progress value={lvlProgress.pct} className="h-2" />
               </div>
-              <Progress value={progress} className="h-2" />
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="font-medium">Roadmap progress</span>
+                  <span className="text-muted-foreground">{progress}%</span>
+                </div>
+                <Progress value={progress} className="h-2" />
+              </div>
             </div>
           </div>
         </Card>
@@ -336,9 +437,15 @@ function Profile() {
             <h3 className="font-semibold text-sm flex items-center gap-1.5">
               <Sparkles className="h-4 w-4 text-primary" /> Career Roadmap
             </h3>
-            <Button size="sm" variant="outline" className="rounded-full gap-1 text-xs" onClick={() => setAddMilestoneOpen(true)}>
-              <Plus className="h-3.5 w-3.5" /> Add
-            </Button>
+            <div className="flex gap-1.5">
+              <Button size="sm" variant="outline" className="rounded-full gap-1 text-xs" onClick={regenerate} disabled={regenerating}>
+                {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+                AI Regenerate
+              </Button>
+              <Button size="sm" variant="outline" className="rounded-full gap-1 text-xs" onClick={() => setAddMilestoneOpen(true)}>
+                <Plus className="h-3.5 w-3.5" /> Add
+              </Button>
+            </div>
           </div>
           <div className="relative">
             <div className="absolute left-[19px] top-3 bottom-3 w-0.5 bg-gradient-to-b from-primary/60 via-primary/30 to-border" />
@@ -392,7 +499,7 @@ function Profile() {
               })}
               {milestones.length === 0 && (
                 <Card className="p-6 text-center text-sm text-muted-foreground">
-                  No milestones yet. Add your first one above.
+                  No milestones yet. Tap "AI Regenerate" or "Add".
                 </Card>
               )}
             </div>
@@ -434,6 +541,8 @@ function Profile() {
           </div>
         </Card>
       </main>
+
+      <LevelUpModal level={levelUp ?? 0} open={levelUp != null} onClose={() => setLevelUp(null)} />
 
       {/* Edit profile dialog */}
       <Dialog open={editProfile} onOpenChange={setEditProfile}>
@@ -499,9 +608,9 @@ function Profile() {
           <DialogHeader><DialogTitle>Add weekly step</DialogTitle></DialogHeader>
           <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); addStep.mutate(new FormData(e.currentTarget)); }}>
             <div className="space-y-1.5"><Label htmlFor="s-week">Week label</Label>
-              <Input id="s-week" name="week_label" required maxLength={40} placeholder="This week" /></div>
+              <Input id="s-week" name="week_label" required maxLength={40} placeholder="Week 1" /></div>
             <div className="space-y-1.5"><Label htmlFor="s-content">Step</Label>
-              <Textarea id="s-content" name="content" required maxLength={300} rows={3} placeholder="What will you do this week?" /></div>
+              <Textarea id="s-content" name="content" required maxLength={300} rows={3} placeholder="Set up 1:1 with skip-level manager" /></div>
             <DialogFooter>
               <Button type="submit" className="brand-gradient text-white rounded-full" disabled={addStep.isPending}>
                 {addStep.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add step"}

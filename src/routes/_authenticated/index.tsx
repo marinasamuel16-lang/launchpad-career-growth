@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Heart, MessageCircle, Repeat2, Share2, Sparkles, TrendingUp, Clock, LogOut, Loader2, Send, Users, UserPlus, UserCheck } from "lucide-react";
+import { Heart, MessageCircle, Repeat2, Share2, Sparkles, TrendingUp, Clock, LogOut, Loader2, Send, Users, UserPlus, UserCheck, Flame } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNowStrict } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -12,10 +12,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BottomNav } from "@/components/BottomNav";
+import { NotificationsBell } from "@/components/NotificationsBell";
+import { LevelUpModal } from "@/components/LevelUpModal";
 import { useAuth } from "@/hooks/use-auth";
 import logo from "@/assets/logo.png";
 import { supabase } from "@/integrations/supabase/client";
+import { awardXp, todayISO } from "@/lib/gamification";
 import { cn } from "@/lib/utils";
+
 
 export const Route = createFileRoute("/_authenticated/")({
   component: Home,
@@ -52,6 +56,33 @@ function Home() {
   const [composer, setComposer] = useState("");
   const [composerTopic, setComposerTopic] = useState<string>(TAGS[0]);
   const [openComments, setOpenComments] = useState<string | null>(null);
+  const [levelUp, setLevelUp] = useState<number | null>(null);
+
+  const profileQuery = useQuery({
+    queryKey: ["profile", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("xp, streak_days, last_active_on").eq("id", user!.id).maybeSingle();
+      return data;
+    },
+  });
+
+  const dailyCheckin = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("Not signed in");
+      return awardXp({ userId: user.id, kind: "daily_checkin" });
+    },
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["profile"] });
+      toast.success(`+5 XP · ${res.newStreak}-day streak 🔥`);
+      if (res.leveledUp) setLevelUp(res.newLevel);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const checkedInToday = profileQuery.data?.last_active_on === todayISO();
+  const streakDays = profileQuery.data?.streak_days ?? 0;
+
 
   const postsQuery = useQuery({
     queryKey: ["posts", user?.id],
@@ -169,13 +200,45 @@ function Home() {
               LaunchPad <span className="brand-gradient-text">EIC</span>
             </h1>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => signOut()} className="gap-1.5 text-xs">
-            <LogOut className="h-3.5 w-3.5" /> Sign out
-          </Button>
+          <div className="flex items-center gap-1">
+            <NotificationsBell />
+            <Button variant="ghost" size="sm" onClick={() => signOut()} className="gap-1.5 text-xs">
+              <LogOut className="h-3.5 w-3.5" /> Sign out
+            </Button>
+          </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-2xl px-4 py-4 space-y-4">
+        {user && (
+          <button
+            type="button"
+            disabled={checkedInToday || dailyCheckin.isPending}
+            onClick={() => dailyCheckin.mutate()}
+            className={cn(
+              "w-full flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 transition-all text-left",
+              checkedInToday
+                ? "bg-amber-500/10 border-amber-500/30"
+                : "brand-gradient text-white border-transparent shadow-md shadow-primary/30 hover:scale-[1.01]",
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <Flame className={cn("h-5 w-5", checkedInToday ? "text-amber-600" : "text-white")} />
+              <div>
+                <p className={cn("text-sm font-semibold", checkedInToday ? "text-amber-700 dark:text-amber-400" : "text-white")}>
+                  {checkedInToday ? `${streakDays}-day streak` : "Check in for today"}
+                </p>
+                <p className={cn("text-[11px]", checkedInToday ? "text-amber-700/70 dark:text-amber-400/70" : "text-white/80")}>
+                  {checkedInToday ? "Come back tomorrow to keep it going" : "+5 XP and grow your streak"}
+                </p>
+              </div>
+            </div>
+            {!checkedInToday && (
+              <span className="text-xs font-semibold bg-white/20 rounded-full px-3 py-1">+5 XP</span>
+            )}
+          </button>
+        )}
+
         <Card className="p-4 shadow-sm">
           <div className="flex gap-3">
             <Avatar className="h-10 w-10">
@@ -317,7 +380,9 @@ function Home() {
       </main>
 
       <CommentsDialog postId={openComments} onClose={() => setOpenComments(null)} />
+      <LevelUpModal level={levelUp ?? 0} open={levelUp != null} onClose={() => setLevelUp(null)} />
       <BottomNav />
+
     </div>
   );
 }
