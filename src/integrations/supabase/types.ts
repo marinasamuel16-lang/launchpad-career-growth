@@ -44,6 +44,30 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       comments: {
         Row: {
           content: string
@@ -162,6 +186,39 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          data: Json
+          id: string
+          post_id: string | null
+          read_at: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          data?: Json
+          id?: string
+          post_id?: string | null
+          read_at?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          data?: Json
+          id?: string
+          post_id?: string | null
+          read_at?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       post_likes: {
         Row: {
           created_at: string
@@ -214,36 +271,48 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           career_goal: string | null
           created_at: string
           id: string
           industry: string | null
+          last_active_on: string | null
           linkedin_url: string | null
           name: string | null
           role: string | null
+          streak_days: number
           updated_at: string
+          xp: number
           years_experience: number | null
         }
         Insert: {
+          avatar_url?: string | null
           career_goal?: string | null
           created_at?: string
           id: string
           industry?: string | null
+          last_active_on?: string | null
           linkedin_url?: string | null
           name?: string | null
           role?: string | null
+          streak_days?: number
           updated_at?: string
+          xp?: number
           years_experience?: number | null
         }
         Update: {
+          avatar_url?: string | null
           career_goal?: string | null
           created_at?: string
           id?: string
           industry?: string | null
+          last_active_on?: string | null
           linkedin_url?: string | null
           name?: string | null
           role?: string | null
+          streak_days?: number
           updated_at?: string
+          xp?: number
           years_experience?: number | null
         }
         Relationships: []
@@ -287,6 +356,33 @@ export type Database = {
           title?: string
           topic?: string
           youtube_url?: string
+        }
+        Relationships: []
+      }
+      xp_events: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          kind: string
+          reference_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          kind: string
+          reference_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          kind?: string
+          reference_id?: string | null
+          user_id?: string
         }
         Relationships: []
       }
