@@ -154,8 +154,28 @@ function Profile() {
     mutationFn: async (task: Task) => {
       const { error } = await supabase.from("milestone_tasks").update({ completed: !task.completed }).eq("id", task.id);
       if (error) throw error;
+
+      // Recompute milestone status based on its tasks
+      const milestone = milestones.find((m) => m.id === task.milestone_id);
+      if (!milestone) return { earned: false };
+      const siblings = (tasksByMilestone.get(task.milestone_id) ?? []).map((t) =>
+        t.id === task.id ? { ...t, completed: !task.completed } : t,
+      );
+      const allDone = siblings.length > 0 && siblings.every((t) => t.completed);
+      const wasDone = milestone.status === "done";
+      const nextStatus: Milestone["status"] = allDone ? "done" : "current";
+      if (milestone.status !== nextStatus) {
+        const { error: mErr } = await supabase
+          .from("milestones").update({ status: nextStatus }).eq("id", milestone.id);
+        if (mErr) throw mErr;
+      }
+      return { earned: allDone && !wasDone, title: milestone.title };
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["milestone_tasks"] }),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["milestone_tasks"] });
+      qc.invalidateQueries({ queryKey: ["milestones"] });
+      if (res?.earned) toast.success(`Milestone earned: ${res.title} 🏆`);
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
