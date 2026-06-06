@@ -380,7 +380,9 @@ function Home() {
       </main>
 
       <CommentsDialog postId={openComments} onClose={() => setOpenComments(null)} />
+      <LevelUpModal level={levelUp ?? 0} open={levelUp != null} onClose={() => setLevelUp(null)} />
       <BottomNav />
+
     </div>
   );
 }
