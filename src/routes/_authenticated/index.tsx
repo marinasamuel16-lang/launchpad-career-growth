@@ -64,7 +64,7 @@ function Home() {
     queryKey: ["profile", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("xp, streak_days, last_active_on").eq("id", user!.id).maybeSingle();
+      const { data } = await supabase.from("profiles").select("xp, streak_days, last_active_on, avatar_url, name").eq("id", user!.id).maybeSingle();
       return data;
     },
   });
