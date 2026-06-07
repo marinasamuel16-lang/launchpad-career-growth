@@ -5,6 +5,8 @@ import { Heart, MessageCircle, Repeat2, Share2, Sparkles, TrendingUp, Clock, Log
 import { toast } from "sonner";
 import { formatDistanceToNowStrict } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/UserAvatar";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
