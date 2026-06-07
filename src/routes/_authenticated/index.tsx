@@ -445,9 +445,13 @@ function CommentsDialog({ postId, onClose }: { postId: string | null; onClose: (
           )}
           {commentsQuery.data?.map((c) => (
             <div key={c.id} className="flex gap-2.5">
-              <Avatar className="h-8 w-8 shrink-0">
-                <AvatarFallback className="brand-gradient text-white text-xs">{initials(c.profile?.name)}</AvatarFallback>
-              </Avatar>
+              <UserAvatar
+                path={c.profile?.avatar_url}
+                name={c.profile?.name}
+                className="h-8 w-8 shrink-0"
+                fallbackClassName="text-xs"
+              />
+
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-xs font-semibold">{c.profile?.name ?? "Member"}</span>
