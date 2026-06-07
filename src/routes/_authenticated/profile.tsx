@@ -296,7 +296,9 @@ function Profile() {
         const r = await awardXp({ userId: user.id, kind: "step", referenceId: s.id });
         return r;
       }
+      await revokeXp({ userId: user.id, kind: "step", referenceId: s.id });
       return null;
+
     },
     onSuccess: async (res) => {
       qc.invalidateQueries({ queryKey: ["action_steps"] });
