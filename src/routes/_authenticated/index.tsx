@@ -99,7 +99,7 @@ function Home() {
       const ids = posts.map((p) => p.id);
       const userIds = [...new Set(posts.map((p) => p.user_id))];
       const [profilesRes, likesRes, commentsRes, myLikesRes] = await Promise.all([
-        supabase.from("profiles").select("id, name, role, years_experience").in("id", userIds),
+        supabase.from("profiles").select("id, name, role, years_experience, avatar_url").in("id", userIds),
         supabase.from("post_likes").select("post_id").in("post_id", ids),
         supabase.from("comments").select("post_id").in("post_id", ids),
         user
