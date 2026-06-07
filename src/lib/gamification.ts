@@ -87,3 +87,55 @@ export async function awardXp(opts: {
 
   return { leveledUp: newLevel > oldLevel, newLevel, newXp, streakIncreased, newStreak };
 }
+
+/**
+ * Revoke previously-awarded XP (e.g. when a task is unchecked).
+ * Removes the matching xp_event row(s) and decrements the user's XP accordingly.
+ * Streak is not modified.
+ */
+export async function revokeXp(opts: {
+  userId: string;
+  kind: XpKind;
+  referenceId: string;
+}): Promise<{ leveledDown: boolean; newLevel: number; newXp: number }> {
+  const { data: events } = await supabase
+    .from("xp_events")
+    .select("id, amount")
+    .eq("user_id", opts.userId)
+    .eq("kind", opts.kind)
+    .eq("reference_id", opts.referenceId);
+
+  const removed = (events ?? []).reduce((sum, e) => sum + (e.amount ?? 0), 0);
+  if (removed <= 0) {
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("xp")
+      .eq("id", opts.userId)
+      .maybeSingle();
+    const cur = prof?.xp ?? 0;
+    return { leveledDown: false, newLevel: levelForXp(cur), newXp: cur };
+  }
+
+  if (events && events.length > 0) {
+    await supabase.from("xp_events").delete().in("id", events.map((e) => e.id));
+  }
+
+  const { data: prof } = await supabase
+    .from("profiles")
+    .select("xp")
+    .eq("id", opts.userId)
+    .maybeSingle();
+
+  const oldXp = prof?.xp ?? 0;
+  const oldLevel = levelForXp(oldXp);
+  const newXp = Math.max(0, oldXp - removed);
+  const newLevel = levelForXp(newXp);
+
+  await supabase.from("profiles").update({
+    xp: newXp,
+    updated_at: new Date().toISOString(),
+  }).eq("id", opts.userId);
+
+  return { leveledDown: newLevel < oldLevel, newLevel, newXp };
+}
+

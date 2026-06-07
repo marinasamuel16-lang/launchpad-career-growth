@@ -24,7 +24,7 @@ import { AvatarUpload, getAvatarSignedUrl } from "@/components/AvatarUpload";
 import { LevelUpModal } from "@/components/LevelUpModal";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
-import { awardXp, levelForXp, progressToNextLevel } from "@/lib/gamification";
+import { awardXp, revokeXp, levelForXp, progressToNextLevel } from "@/lib/gamification";
 import { generateRoadmap } from "@/lib/ai-coach.functions";
 import { cn } from "@/lib/utils";
 
@@ -198,13 +198,16 @@ function Profile() {
         await supabase.from("milestones").update({ status: nextStatus }).eq("id", milestone.id);
       }
 
-      // XP: award when task is checked off (not on uncheck)
+      // XP: award on check, revoke on uncheck
       let levelRes: { leveledUp: boolean; newLevel: number; newXp: number; streakIncreased: boolean; newStreak: number } | null = null;
       if (willComplete) {
         levelRes = await awardXp({ userId: user.id, kind: "task", referenceId: task.id });
+      } else {
+        await revokeXp({ userId: user.id, kind: "task", referenceId: task.id });
       }
-      // Milestone earned
+      // Milestone earned / un-earned
       const earned = allDone && !wasDone;
+      const unearned = !allDone && wasDone;
       if (earned) {
         const ms = await awardXp({ userId: user.id, kind: "milestone", referenceId: milestone.id });
         if (ms.leveledUp) levelRes = ms;
@@ -214,8 +217,11 @@ function Profile() {
           type: "milestone_earned",
           data: { title: milestone.title },
         });
+      } else if (unearned) {
+        await revokeXp({ userId: user.id, kind: "milestone", referenceId: milestone.id });
       }
       return { earned, title: milestone.title, levelRes };
+
     },
     onSuccess: async (res) => {
       qc.invalidateQueries({ queryKey: ["milestone_tasks"] });
@@ -290,7 +296,9 @@ function Profile() {
         const r = await awardXp({ userId: user.id, kind: "step", referenceId: s.id });
         return r;
       }
+      await revokeXp({ userId: user.id, kind: "step", referenceId: s.id });
       return null;
+
     },
     onSuccess: async (res) => {
       qc.invalidateQueries({ queryKey: ["action_steps"] });
