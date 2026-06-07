@@ -243,11 +243,12 @@ function Home() {
 
         <Card className="p-4 shadow-sm">
           <div className="flex gap-3">
-            <Avatar className="h-10 w-10">
-              <AvatarFallback className="brand-gradient text-white font-semibold">
-                {initials(user?.user_metadata?.name as string | undefined ?? user?.email)}
-              </AvatarFallback>
-            </Avatar>
+            <UserAvatar
+              path={profileQuery.data?.avatar_url}
+              name={(profileQuery.data?.name as string | undefined) ?? (user?.user_metadata?.name as string | undefined) ?? user?.email}
+              className="h-10 w-10"
+            />
+
             <div className="flex-1 space-y-3">
               <Textarea
                 value={composer}
