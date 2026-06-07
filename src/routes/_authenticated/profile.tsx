@@ -24,7 +24,7 @@ import { AvatarUpload, getAvatarSignedUrl } from "@/components/AvatarUpload";
 import { LevelUpModal } from "@/components/LevelUpModal";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
-import { awardXp, levelForXp, progressToNextLevel } from "@/lib/gamification";
+import { awardXp, revokeXp, levelForXp, progressToNextLevel } from "@/lib/gamification";
 import { generateRoadmap } from "@/lib/ai-coach.functions";
 import { cn } from "@/lib/utils";
 
