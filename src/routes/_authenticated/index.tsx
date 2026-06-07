@@ -40,7 +40,7 @@ type Post = {
   content: string;
   topic: string;
   created_at: string;
-  profile: { name: string | null; role: string | null; years_experience: number | null } | null;
+  profile: { name: string | null; role: string | null; years_experience: number | null; avatar_url: string | null } | null;
   likes: number;
   comments: number;
   liked_by_me: boolean;
