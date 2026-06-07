@@ -43,7 +43,9 @@ type Post = {
   profile: { name: string | null; role: string | null; years_experience: number | null; avatar_url: string | null } | null;
   likes: number;
   comments: number;
+  reposts: number;
   liked_by_me: boolean;
+  reposted_by_me: boolean;
 };
 
 function initials(name?: string | null) {
