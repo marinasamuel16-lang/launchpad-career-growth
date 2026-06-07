@@ -100,12 +100,16 @@ function Home() {
       if (!posts || posts.length === 0) return [];
       const ids = posts.map((p) => p.id);
       const userIds = [...new Set(posts.map((p) => p.user_id))];
-      const [profilesRes, likesRes, commentsRes, myLikesRes] = await Promise.all([
+      const [profilesRes, likesRes, commentsRes, repostsRes, myLikesRes, myRepostsRes] = await Promise.all([
         supabase.from("profiles").select("id, name, role, years_experience, avatar_url").in("id", userIds),
         supabase.from("post_likes").select("post_id").in("post_id", ids),
         supabase.from("comments").select("post_id").in("post_id", ids),
+        supabase.from("post_reposts").select("post_id").in("post_id", ids),
         user
           ? supabase.from("post_likes").select("post_id").in("post_id", ids).eq("user_id", user.id)
+          : Promise.resolve({ data: [] as { post_id: string }[] }),
+        user
+          ? supabase.from("post_reposts").select("post_id").in("post_id", ids).eq("user_id", user.id)
           : Promise.resolve({ data: [] as { post_id: string }[] }),
       ]);
       const pmap = new Map((profilesRes.data ?? []).map((p) => [p.id, p]));
@@ -113,13 +117,18 @@ function Home() {
       (likesRes.data ?? []).forEach((l) => likeCounts.set(l.post_id, (likeCounts.get(l.post_id) ?? 0) + 1));
       const commentCounts = new Map<string, number>();
       (commentsRes.data ?? []).forEach((c) => commentCounts.set(c.post_id, (commentCounts.get(c.post_id) ?? 0) + 1));
+      const repostCounts = new Map<string, number>();
+      (repostsRes.data ?? []).forEach((r) => repostCounts.set(r.post_id, (repostCounts.get(r.post_id) ?? 0) + 1));
       const mineSet = new Set((myLikesRes.data ?? []).map((l) => l.post_id));
+      const myRepostsSet = new Set((myRepostsRes.data ?? []).map((r) => r.post_id));
       return posts.map((p) => ({
         ...p,
         profile: pmap.get(p.user_id) ?? null,
         likes: likeCounts.get(p.id) ?? 0,
         comments: commentCounts.get(p.id) ?? 0,
+        reposts: repostCounts.get(p.id) ?? 0,
         liked_by_me: mineSet.has(p.id),
+        reposted_by_me: myRepostsSet.has(p.id),
       }));
     },
   });
