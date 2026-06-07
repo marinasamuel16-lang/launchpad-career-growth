@@ -5,6 +5,8 @@ import { Heart, MessageCircle, Repeat2, Share2, Sparkles, TrendingUp, Clock, Log
 import { toast } from "sonner";
 import { formatDistanceToNowStrict } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/UserAvatar";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -38,7 +40,7 @@ type Post = {
   content: string;
   topic: string;
   created_at: string;
-  profile: { name: string | null; role: string | null; years_experience: number | null } | null;
+  profile: { name: string | null; role: string | null; years_experience: number | null; avatar_url: string | null } | null;
   likes: number;
   comments: number;
   liked_by_me: boolean;
@@ -62,7 +64,7 @@ function Home() {
     queryKey: ["profile", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("xp, streak_days, last_active_on").eq("id", user!.id).maybeSingle();
+      const { data } = await supabase.from("profiles").select("xp, streak_days, last_active_on, avatar_url, name").eq("id", user!.id).maybeSingle();
       return data;
     },
   });
@@ -97,7 +99,7 @@ function Home() {
       const ids = posts.map((p) => p.id);
       const userIds = [...new Set(posts.map((p) => p.user_id))];
       const [profilesRes, likesRes, commentsRes, myLikesRes] = await Promise.all([
-        supabase.from("profiles").select("id, name, role, years_experience").in("id", userIds),
+        supabase.from("profiles").select("id, name, role, years_experience, avatar_url").in("id", userIds),
         supabase.from("post_likes").select("post_id").in("post_id", ids),
         supabase.from("comments").select("post_id").in("post_id", ids),
         user
@@ -241,11 +243,12 @@ function Home() {
 
         <Card className="p-4 shadow-sm">
           <div className="flex gap-3">
-            <Avatar className="h-10 w-10">
-              <AvatarFallback className="brand-gradient text-white font-semibold">
-                {initials(user?.user_metadata?.name as string | undefined ?? user?.email)}
-              </AvatarFallback>
-            </Avatar>
+            <UserAvatar
+              path={profileQuery.data?.avatar_url}
+              name={(profileQuery.data?.name as string | undefined) ?? (user?.user_metadata?.name as string | undefined) ?? user?.email}
+              className="h-10 w-10"
+            />
+
             <div className="flex-1 space-y-3">
               <Textarea
                 value={composer}
@@ -325,11 +328,13 @@ function Home() {
           {visible.map((p) => (
             <Card key={p.id} className="p-4 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex gap-3">
-                <Avatar className="h-10 w-10 shrink-0">
-                  <AvatarFallback className="brand-gradient text-white font-semibold text-sm">
-                    {initials(p.profile?.name)}
-                  </AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                  path={p.profile?.avatar_url}
+                  name={p.profile?.name}
+                  className="h-10 w-10 shrink-0"
+                  fallbackClassName="text-sm"
+                />
+
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="font-semibold text-sm">{p.profile?.name ?? "Member"}</span>
@@ -404,8 +409,9 @@ function CommentsDialog({ postId, onClose }: { postId: string | null; onClose: (
       if (error) throw error;
       const userIds = [...new Set((comments ?? []).map((c) => c.user_id))];
       const { data: profiles } = userIds.length
-        ? await supabase.from("profiles").select("id, name, role").in("id", userIds)
-        : { data: [] as { id: string; name: string | null; role: string | null }[] };
+        ? await supabase.from("profiles").select("id, name, role, avatar_url").in("id", userIds)
+        : { data: [] as { id: string; name: string | null; role: string | null; avatar_url: string | null }[] };
+
       const pmap = new Map((profiles ?? []).map((p) => [p.id, p]));
       return (comments ?? []).map((c) => ({ ...c, profile: pmap.get(c.user_id) ?? null }));
     },
@@ -439,9 +445,13 @@ function CommentsDialog({ postId, onClose }: { postId: string | null; onClose: (
           )}
           {commentsQuery.data?.map((c) => (
             <div key={c.id} className="flex gap-2.5">
-              <Avatar className="h-8 w-8 shrink-0">
-                <AvatarFallback className="brand-gradient text-white text-xs">{initials(c.profile?.name)}</AvatarFallback>
-              </Avatar>
+              <UserAvatar
+                path={c.profile?.avatar_url}
+                name={c.profile?.name}
+                className="h-8 w-8 shrink-0"
+                fallbackClassName="text-xs"
+              />
+
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-xs font-semibold">{c.profile?.name ?? "Member"}</span>
