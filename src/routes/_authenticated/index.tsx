@@ -409,8 +409,9 @@ function CommentsDialog({ postId, onClose }: { postId: string | null; onClose: (
       if (error) throw error;
       const userIds = [...new Set((comments ?? []).map((c) => c.user_id))];
       const { data: profiles } = userIds.length
-        ? await supabase.from("profiles").select("id, name, role").in("id", userIds)
-        : { data: [] as { id: string; name: string | null; role: string | null }[] };
+        ? await supabase.from("profiles").select("id, name, role, avatar_url").in("id", userIds)
+        : { data: [] as { id: string; name: string | null; role: string | null; avatar_url: string | null }[] };
+
       const pmap = new Map((profiles ?? []).map((p) => [p.id, p]));
       return (comments ?? []).map((c) => ({ ...c, profile: pmap.get(c.user_id) ?? null }));
     },
