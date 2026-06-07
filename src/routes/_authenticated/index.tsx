@@ -328,11 +328,13 @@ function Home() {
           {visible.map((p) => (
             <Card key={p.id} className="p-4 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex gap-3">
-                <Avatar className="h-10 w-10 shrink-0">
-                  <AvatarFallback className="brand-gradient text-white font-semibold text-sm">
-                    {initials(p.profile?.name)}
-                  </AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                  path={p.profile?.avatar_url}
+                  name={p.profile?.name}
+                  className="h-10 w-10 shrink-0"
+                  fallbackClassName="text-sm"
+                />
+
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="font-semibold text-sm">{p.profile?.name ?? "Member"}</span>
