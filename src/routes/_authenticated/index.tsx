@@ -425,8 +425,18 @@ function Home() {
                     <button onClick={() => setOpenComments(p.id)} className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors">
                       <MessageCircle className="h-4 w-4" /> {p.comments}
                     </button>
-                    <button className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors"><Repeat2 className="h-4 w-4" /></button>
-                    <button className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors"><Share2 className="h-4 w-4" /></button>
+                    <button
+                      onClick={() => toggleRepost.mutate({ postId: p.id, reposted: p.reposted_by_me })}
+                      className={cn("flex items-center gap-1.5 text-xs hover:text-green-600 transition-colors", p.reposted_by_me && "text-green-600")}
+                    >
+                      <Repeat2 className="h-4 w-4" /> {p.reposts > 0 ? p.reposts : ""}
+                    </button>
+                    <button
+                      onClick={() => sharePost(p.id, p.profile?.name)}
+                      className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors"
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
               </div>
