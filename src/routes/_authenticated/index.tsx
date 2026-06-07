@@ -43,7 +43,9 @@ type Post = {
   profile: { name: string | null; role: string | null; years_experience: number | null; avatar_url: string | null } | null;
   likes: number;
   comments: number;
+  reposts: number;
   liked_by_me: boolean;
+  reposted_by_me: boolean;
 };
 
 function initials(name?: string | null) {
@@ -98,12 +100,16 @@ function Home() {
       if (!posts || posts.length === 0) return [];
       const ids = posts.map((p) => p.id);
       const userIds = [...new Set(posts.map((p) => p.user_id))];
-      const [profilesRes, likesRes, commentsRes, myLikesRes] = await Promise.all([
+      const [profilesRes, likesRes, commentsRes, repostsRes, myLikesRes, myRepostsRes] = await Promise.all([
         supabase.from("profiles").select("id, name, role, years_experience, avatar_url").in("id", userIds),
         supabase.from("post_likes").select("post_id").in("post_id", ids),
         supabase.from("comments").select("post_id").in("post_id", ids),
+        supabase.from("post_reposts").select("post_id").in("post_id", ids),
         user
           ? supabase.from("post_likes").select("post_id").in("post_id", ids).eq("user_id", user.id)
+          : Promise.resolve({ data: [] as { post_id: string }[] }),
+        user
+          ? supabase.from("post_reposts").select("post_id").in("post_id", ids).eq("user_id", user.id)
           : Promise.resolve({ data: [] as { post_id: string }[] }),
       ]);
       const pmap = new Map((profilesRes.data ?? []).map((p) => [p.id, p]));
@@ -111,13 +117,18 @@ function Home() {
       (likesRes.data ?? []).forEach((l) => likeCounts.set(l.post_id, (likeCounts.get(l.post_id) ?? 0) + 1));
       const commentCounts = new Map<string, number>();
       (commentsRes.data ?? []).forEach((c) => commentCounts.set(c.post_id, (commentCounts.get(c.post_id) ?? 0) + 1));
+      const repostCounts = new Map<string, number>();
+      (repostsRes.data ?? []).forEach((r) => repostCounts.set(r.post_id, (repostCounts.get(r.post_id) ?? 0) + 1));
       const mineSet = new Set((myLikesRes.data ?? []).map((l) => l.post_id));
+      const myRepostsSet = new Set((myRepostsRes.data ?? []).map((r) => r.post_id));
       return posts.map((p) => ({
         ...p,
         profile: pmap.get(p.user_id) ?? null,
         likes: likeCounts.get(p.id) ?? 0,
         comments: commentCounts.get(p.id) ?? 0,
+        reposts: repostCounts.get(p.id) ?? 0,
         liked_by_me: mineSet.has(p.id),
+        reposted_by_me: myRepostsSet.has(p.id),
       }));
     },
   });
@@ -153,6 +164,46 @@ function Home() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["posts"] }),
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const toggleRepost = useMutation({
+    mutationFn: async ({ postId, reposted }: { postId: string; reposted: boolean }) => {
+      if (!user) throw new Error("Not signed in");
+      if (reposted) {
+        const { error } = await supabase.from("post_reposts").delete().eq("post_id", postId).eq("user_id", user.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("post_reposts").insert({ post_id: postId, user_id: user.id });
+        if (error) throw error;
+      }
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["posts"] });
+      toast.success(vars.reposted ? "Repost removed" : "Reposted");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const sharePost = async (postId: string, authorName?: string | null) => {
+    const url = `${window.location.origin}/?post=${postId}`;
+    const shareData = { title: "LaunchPad EIC", text: authorName ? `Check out ${authorName}'s post on LaunchPad EIC` : "Check out this post on LaunchPad EIC", url };
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Link copied to clipboard");
+      }
+    } catch (err) {
+      if ((err as Error)?.name !== "AbortError") {
+        try {
+          await navigator.clipboard.writeText(url);
+          toast.success("Link copied to clipboard");
+        } catch {
+          toast.error("Could not share post");
+        }
+      }
+    }
+  };
   const followingQuery = useQuery({
     queryKey: ["following", user?.id],
     enabled: !!user,
@@ -374,8 +425,18 @@ function Home() {
                     <button onClick={() => setOpenComments(p.id)} className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors">
                       <MessageCircle className="h-4 w-4" /> {p.comments}
                     </button>
-                    <button className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors"><Repeat2 className="h-4 w-4" /></button>
-                    <button className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors"><Share2 className="h-4 w-4" /></button>
+                    <button
+                      onClick={() => toggleRepost.mutate({ postId: p.id, reposted: p.reposted_by_me })}
+                      className={cn("flex items-center gap-1.5 text-xs hover:text-green-600 transition-colors", p.reposted_by_me && "text-green-600")}
+                    >
+                      <Repeat2 className="h-4 w-4" /> {p.reposts > 0 ? p.reposts : ""}
+                    </button>
+                    <button
+                      onClick={() => sharePost(p.id, p.profile?.name)}
+                      className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors"
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
               </div>
