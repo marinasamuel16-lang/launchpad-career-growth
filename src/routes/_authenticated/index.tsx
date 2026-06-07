@@ -164,6 +164,46 @@ function Home() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["posts"] }),
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const toggleRepost = useMutation({
+    mutationFn: async ({ postId, reposted }: { postId: string; reposted: boolean }) => {
+      if (!user) throw new Error("Not signed in");
+      if (reposted) {
+        const { error } = await supabase.from("post_reposts").delete().eq("post_id", postId).eq("user_id", user.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("post_reposts").insert({ post_id: postId, user_id: user.id });
+        if (error) throw error;
+      }
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["posts"] });
+      toast.success(vars.reposted ? "Repost removed" : "Reposted");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const sharePost = async (postId: string, authorName?: string | null) => {
+    const url = `${window.location.origin}/?post=${postId}`;
+    const shareData = { title: "LaunchPad EIC", text: authorName ? `Check out ${authorName}'s post on LaunchPad EIC` : "Check out this post on LaunchPad EIC", url };
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Link copied to clipboard");
+      }
+    } catch (err) {
+      if ((err as Error)?.name !== "AbortError") {
+        try {
+          await navigator.clipboard.writeText(url);
+          toast.success("Link copied to clipboard");
+        } catch {
+          toast.error("Could not share post");
+        }
+      }
+    }
+  };
   const followingQuery = useQuery({
     queryKey: ["following", user?.id],
     enabled: !!user,
