@@ -155,6 +155,37 @@ function Home() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const updatePost = useMutation({
+    mutationFn: async ({ postId, content, topic }: { postId: string; content: string; topic: string }) => {
+      if (!user) throw new Error("Not signed in");
+      const trimmed = content.trim();
+      if (!trimmed) throw new Error("Post can't be empty");
+      if (trimmed.length > 1000) throw new Error("Keep it under 1000 characters");
+      const { error } = await supabase.from("posts").update({ content: trimmed, topic }).eq("id", postId).eq("user_id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setEditingId(null);
+      qc.invalidateQueries({ queryKey: ["posts"] });
+      toast.success("Post updated");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deletePost = useMutation({
+    mutationFn: async (postId: string) => {
+      if (!user) throw new Error("Not signed in");
+      const { error } = await supabase.from("posts").delete().eq("id", postId).eq("user_id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setDeletingId(null);
+      qc.invalidateQueries({ queryKey: ["posts"] });
+      toast.success("Post deleted");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const toggleLike = useMutation({
     mutationFn: async ({ postId, liked }: { postId: string; liked: boolean }) => {
       if (!user) throw new Error("Not signed in");
