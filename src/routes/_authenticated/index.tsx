@@ -442,15 +442,86 @@ function Home() {
                         </button>
                       );
                     })()}
+                    {user && p.user_id === user.id && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            aria-label="Post options"
+                            className="ml-auto rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-36">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setEditingId(p.id);
+                              setEditingContent(p.content);
+                              setEditingTopic(p.topic);
+                            }}
+                          >
+                            <Pencil className="h-4 w-4 mr-2" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setDeletingId(p.id)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {p.profile?.role ?? "Early-career professional"}
                     {p.profile?.years_experience != null && ` · ${p.profile.years_experience}y exp`}
                   </p>
-                  <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">{p.content}</p>
-                  <div className="mt-3 flex items-center gap-2">
-                    <Badge variant="secondary" className="rounded-full text-xs">#{p.topic}</Badge>
-                  </div>
+                  {editingId === p.id ? (
+                    <div className="mt-2 space-y-2">
+                      <Textarea
+                        value={editingContent}
+                        onChange={(e) => setEditingContent(e.target.value)}
+                        maxLength={1000}
+                        className="min-h-[80px] resize-none text-sm"
+                      />
+                      <div className="flex items-center justify-between gap-2">
+                        <Select value={editingTopic} onValueChange={setEditingTopic}>
+                          <SelectTrigger className="w-[160px] h-8 rounded-full text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TAGS.map((t) => <SelectItem key={t} value={t}>#{t}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingId(null)}
+                            disabled={updatePost.isPending}
+                            className="gap-1 h-8"
+                          >
+                            <X className="h-3.5 w-3.5" /> Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="brand-gradient text-white rounded-full px-4 h-8 gap-1"
+                            disabled={!editingContent.trim() || updatePost.isPending}
+                            onClick={() => updatePost.mutate({ postId: p.id, content: editingContent, topic: editingTopic })}
+                          >
+                            {updatePost.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Check className="h-3.5 w-3.5" /> Save</>}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">{p.content}</p>
+                      <div className="mt-3 flex items-center gap-2">
+                        <Badge variant="secondary" className="rounded-full text-xs">#{p.topic}</Badge>
+                      </div>
+                    </>
+                  )}
                   <div className="mt-3 flex items-center gap-6 text-muted-foreground">
                     <button
                       onClick={() => toggleLike.mutate({ postId: p.id, liked: p.liked_by_me })}
@@ -474,6 +545,7 @@ function Home() {
                       <Share2 className="h-4 w-4" />
                     </button>
                   </div>
+
                 </div>
               </div>
             </Card>
