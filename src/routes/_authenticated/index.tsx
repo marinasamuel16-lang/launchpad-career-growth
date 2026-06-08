@@ -555,6 +555,26 @@ function Home() {
 
       <CommentsDialog postId={openComments} onClose={() => setOpenComments(null)} />
       <LevelUpModal level={levelUp ?? 0} open={levelUp != null} onClose={() => setLevelUp(null)} />
+
+      <Dialog open={deletingId != null} onOpenChange={(o) => !o && setDeletingId(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete this post?</DialogTitle>
+            <DialogDescription>This can't be undone. Likes, comments, and reposts will also be removed.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="ghost" onClick={() => setDeletingId(null)} disabled={deletePost.isPending}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => deletingId && deletePost.mutate(deletingId)}
+              disabled={deletePost.isPending}
+            >
+              {deletePost.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <BottomNav />
 
     </div>
