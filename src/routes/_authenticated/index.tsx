@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Heart, MessageCircle, Repeat2, Share2, Sparkles, TrendingUp, Clock, LogOut, Loader2, Send, Users, UserPlus, UserCheck, Flame } from "lucide-react";
+import { Heart, MessageCircle, Repeat2, Share2, Sparkles, TrendingUp, Clock, LogOut, Loader2, Send, Users, UserPlus, UserCheck, Flame, MoreHorizontal, Pencil, Trash2, X, Check } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNowStrict } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -11,8 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { BottomNav } from "@/components/BottomNav";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { LevelUpModal } from "@/components/LevelUpModal";
@@ -61,6 +62,10 @@ function Home() {
   const [composerTopic, setComposerTopic] = useState<string>(TAGS[0]);
   const [openComments, setOpenComments] = useState<string | null>(null);
   const [levelUp, setLevelUp] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState("");
+  const [editingTopic, setEditingTopic] = useState<string>(TAGS[0]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const profileQuery = useQuery({
     queryKey: ["profile", user?.id],
@@ -146,6 +151,37 @@ function Home() {
       setComposer("");
       qc.invalidateQueries({ queryKey: ["posts"] });
       toast.success("Posted!");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updatePost = useMutation({
+    mutationFn: async ({ postId, content, topic }: { postId: string; content: string; topic: string }) => {
+      if (!user) throw new Error("Not signed in");
+      const trimmed = content.trim();
+      if (!trimmed) throw new Error("Post can't be empty");
+      if (trimmed.length > 1000) throw new Error("Keep it under 1000 characters");
+      const { error } = await supabase.from("posts").update({ content: trimmed, topic }).eq("id", postId).eq("user_id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setEditingId(null);
+      qc.invalidateQueries({ queryKey: ["posts"] });
+      toast.success("Post updated");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deletePost = useMutation({
+    mutationFn: async (postId: string) => {
+      if (!user) throw new Error("Not signed in");
+      const { error } = await supabase.from("posts").delete().eq("id", postId).eq("user_id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setDeletingId(null);
+      qc.invalidateQueries({ queryKey: ["posts"] });
+      toast.success("Post deleted");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -406,15 +442,86 @@ function Home() {
                         </button>
                       );
                     })()}
+                    {user && p.user_id === user.id && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            aria-label="Post options"
+                            className="ml-auto rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-36">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setEditingId(p.id);
+                              setEditingContent(p.content);
+                              setEditingTopic(p.topic);
+                            }}
+                          >
+                            <Pencil className="h-4 w-4 mr-2" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setDeletingId(p.id)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {p.profile?.role ?? "Early-career professional"}
                     {p.profile?.years_experience != null && ` · ${p.profile.years_experience}y exp`}
                   </p>
-                  <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">{p.content}</p>
-                  <div className="mt-3 flex items-center gap-2">
-                    <Badge variant="secondary" className="rounded-full text-xs">#{p.topic}</Badge>
-                  </div>
+                  {editingId === p.id ? (
+                    <div className="mt-2 space-y-2">
+                      <Textarea
+                        value={editingContent}
+                        onChange={(e) => setEditingContent(e.target.value)}
+                        maxLength={1000}
+                        className="min-h-[80px] resize-none text-sm"
+                      />
+                      <div className="flex items-center justify-between gap-2">
+                        <Select value={editingTopic} onValueChange={setEditingTopic}>
+                          <SelectTrigger className="w-[160px] h-8 rounded-full text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TAGS.map((t) => <SelectItem key={t} value={t}>#{t}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingId(null)}
+                            disabled={updatePost.isPending}
+                            className="gap-1 h-8"
+                          >
+                            <X className="h-3.5 w-3.5" /> Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="brand-gradient text-white rounded-full px-4 h-8 gap-1"
+                            disabled={!editingContent.trim() || updatePost.isPending}
+                            onClick={() => updatePost.mutate({ postId: p.id, content: editingContent, topic: editingTopic })}
+                          >
+                            {updatePost.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Check className="h-3.5 w-3.5" /> Save</>}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">{p.content}</p>
+                      <div className="mt-3 flex items-center gap-2">
+                        <Badge variant="secondary" className="rounded-full text-xs">#{p.topic}</Badge>
+                      </div>
+                    </>
+                  )}
                   <div className="mt-3 flex items-center gap-6 text-muted-foreground">
                     <button
                       onClick={() => toggleLike.mutate({ postId: p.id, liked: p.liked_by_me })}
@@ -438,6 +545,7 @@ function Home() {
                       <Share2 className="h-4 w-4" />
                     </button>
                   </div>
+
                 </div>
               </div>
             </Card>
@@ -447,6 +555,26 @@ function Home() {
 
       <CommentsDialog postId={openComments} onClose={() => setOpenComments(null)} />
       <LevelUpModal level={levelUp ?? 0} open={levelUp != null} onClose={() => setLevelUp(null)} />
+
+      <Dialog open={deletingId != null} onOpenChange={(o) => !o && setDeletingId(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete this post?</DialogTitle>
+            <DialogDescription>This can't be undone. Likes, comments, and reposts will also be removed.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="ghost" onClick={() => setDeletingId(null)} disabled={deletePost.isPending}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => deletingId && deletePost.mutate(deletingId)}
+              disabled={deletePost.isPending}
+            >
+              {deletePost.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <BottomNav />
 
     </div>
