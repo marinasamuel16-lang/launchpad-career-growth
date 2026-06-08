@@ -18,9 +18,10 @@ async function callLovableAI(body: unknown): Promise<any> {
   });
   if (!res.ok) {
     const txt = await res.text();
+    console.error(`[AI] upstream error ${res.status}:`, txt);
     if (res.status === 429) throw new Error("Rate limit reached — try again in a minute.");
     if (res.status === 402) throw new Error("AI credits exhausted. Add credits to your workspace.");
-    throw new Error(`AI request failed (${res.status}): ${txt.slice(0, 200)}`);
+    throw new Error("AI request failed. Please try again.");
   }
   return res.json();
 }
