@@ -62,6 +62,10 @@ function Home() {
   const [composerTopic, setComposerTopic] = useState<string>(TAGS[0]);
   const [openComments, setOpenComments] = useState<string | null>(null);
   const [levelUp, setLevelUp] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState("");
+  const [editingTopic, setEditingTopic] = useState<string>(TAGS[0]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const profileQuery = useQuery({
     queryKey: ["profile", user?.id],
