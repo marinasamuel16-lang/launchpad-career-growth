@@ -311,12 +311,12 @@ function Home() {
 
   const visible = useMemo(() => {
     let list = postsQuery.data ?? [];
-    if (activeTag) list = list.filter((p) => p.topic === activeTag);
+    if (activeTag) list = list.filter((e) => e.post.topic === activeTag);
     if (filter === "following") {
       const set = followingQuery.data ?? new Set<string>();
-      list = list.filter((p) => set.has(p.user_id));
+      list = list.filter((e) => set.has(e.post.user_id) || (e.repost_by && set.has(e.repost_by.user_id)));
     }
-    if (filter === "trending") list = [...list].sort((a, b) => (b.likes + b.comments) - (a.likes + a.comments));
+    if (filter === "trending") list = [...list].sort((a, b) => (b.post.likes + b.post.comments) - (a.post.likes + a.post.comments));
     return list;
   }, [postsQuery.data, filter, activeTag, followingQuery.data]);
 
