@@ -453,8 +453,19 @@ function Home() {
               No posts yet — be the first to ask a question.
             </Card>
           )}
-          {visible.map((p) => (
-            <Card key={p.id} className="p-4 shadow-sm hover:shadow-md transition-shadow">
+          {visible.map((entry) => {
+            const p = entry.post;
+            return (
+            <Card key={entry.key} className="p-4 shadow-sm hover:shadow-md transition-shadow">
+              {entry.repost_by && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
+                  <Repeat2 className="h-3.5 w-3.5 text-green-600" />
+                  <span>
+                    {user && entry.repost_by.user_id === user.id ? "You" : (entry.repost_by.name ?? "Someone")} reposted
+                    {" · "}{formatDistanceToNowStrict(new Date(entry.repost_by.created_at))} ago
+                  </span>
+                </div>
+              )}
               <div className="flex gap-3">
                 <UserAvatar
                   path={p.profile?.avatar_url}
@@ -483,7 +494,7 @@ function Home() {
                         </button>
                       );
                     })()}
-                    {user && p.user_id === user.id && (
+                    {user && p.user_id === user.id && !entry.repost_by && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
@@ -590,7 +601,8 @@ function Home() {
                 </div>
               </div>
             </Card>
-          ))}
+            );
+          })}
         </div>
       </main>
 
