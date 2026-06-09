@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -351,6 +351,12 @@ function Profile() {
           <h1 className="text-lg font-bold tracking-tight">Your Career Roadmap</h1>
           <div className="flex items-center gap-1">
             <NotificationsBell />
+            <Link
+              to="/my-posts"
+              className="rounded-full px-3 py-1.5 text-xs font-medium border border-border/60 hover:bg-muted transition-colors"
+            >
+              My posts
+            </Link>
             <Button variant="outline" size="sm" className="rounded-full gap-1.5" onClick={() => setEditProfile(true)}>
               <Edit3 className="h-3.5 w-3.5" /> Edit
             </Button>
