@@ -102,17 +102,29 @@ function Home() {
 
   const postsQuery = useQuery({
     queryKey: ["posts", user?.id],
-    queryFn: async (): Promise<Post[]> => {
-      const { data: posts, error } = await supabase
-        .from("posts")
-        .select("id, user_id, content, topic, created_at")
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      if (!posts || posts.length === 0) return [];
+    queryFn: async (): Promise<FeedEntry[]> => {
+      // Pull newest 100 posts + newest 100 reposts in parallel
+      const [postsRes, repostsNewestRes] = await Promise.all([
+        supabase.from("posts").select("id, user_id, content, topic, created_at").order("created_at", { ascending: false }).limit(100),
+        supabase.from("post_reposts").select("post_id, user_id, created_at").order("created_at", { ascending: false }).limit(100),
+      ]);
+      if (postsRes.error) throw postsRes.error;
+      if (repostsNewestRes.error) throw repostsNewestRes.error;
+      let posts = postsRes.data ?? [];
+      const repostsNewest = repostsNewestRes.data ?? [];
+
+      // Make sure we have the underlying post for every recent repost
+      const havePostIds = new Set(posts.map((p) => p.id));
+      const missingIds = [...new Set(repostsNewest.map((r) => r.post_id).filter((id) => !havePostIds.has(id)))];
+      if (missingIds.length > 0) {
+        const { data: extra } = await supabase.from("posts").select("id, user_id, content, topic, created_at").in("id", missingIds);
+        posts = [...posts, ...(extra ?? [])];
+      }
+      if (posts.length === 0) return [];
+
       const ids = posts.map((p) => p.id);
-      const userIds = [...new Set(posts.map((p) => p.user_id))];
-      const [profilesRes, likesRes, commentsRes, repostsRes, myLikesRes, myRepostsRes] = await Promise.all([
+      const userIds = [...new Set([...posts.map((p) => p.user_id), ...repostsNewest.map((r) => r.user_id)])];
+      const [profilesRes, likesRes, commentsRes, repostsAllRes, myLikesRes, myRepostsRes] = await Promise.all([
         supabase.from("profiles").select("id, name, role, years_experience, avatar_url").in("id", userIds),
         supabase.from("post_likes").select("post_id").in("post_id", ids),
         supabase.from("comments").select("post_id").in("post_id", ids),
@@ -130,18 +142,40 @@ function Home() {
       const commentCounts = new Map<string, number>();
       (commentsRes.data ?? []).forEach((c) => commentCounts.set(c.post_id, (commentCounts.get(c.post_id) ?? 0) + 1));
       const repostCounts = new Map<string, number>();
-      (repostsRes.data ?? []).forEach((r) => repostCounts.set(r.post_id, (repostCounts.get(r.post_id) ?? 0) + 1));
+      (repostsAllRes.data ?? []).forEach((r) => repostCounts.set(r.post_id, (repostCounts.get(r.post_id) ?? 0) + 1));
       const mineSet = new Set((myLikesRes.data ?? []).map((l) => l.post_id));
       const myRepostsSet = new Set((myRepostsRes.data ?? []).map((r) => r.post_id));
-      return posts.map((p) => ({
-        ...p,
-        profile: pmap.get(p.user_id) ?? null,
-        likes: likeCounts.get(p.id) ?? 0,
-        comments: commentCounts.get(p.id) ?? 0,
-        reposts: repostCounts.get(p.id) ?? 0,
-        liked_by_me: mineSet.has(p.id),
-        reposted_by_me: myRepostsSet.has(p.id),
-      }));
+
+      const postMap = new Map<string, Post>();
+      posts.forEach((p) => {
+        postMap.set(p.id, {
+          ...p,
+          profile: pmap.get(p.user_id) ?? null,
+          likes: likeCounts.get(p.id) ?? 0,
+          comments: commentCounts.get(p.id) ?? 0,
+          reposts: repostCounts.get(p.id) ?? 0,
+          liked_by_me: mineSet.has(p.id),
+          reposted_by_me: myRepostsSet.has(p.id),
+        });
+      });
+
+      const entries: FeedEntry[] = [];
+      postMap.forEach((post) => {
+        entries.push({ key: `p-${post.id}`, post, sort_at: post.created_at, repost_by: null });
+      });
+      repostsNewest.forEach((r) => {
+        const post = postMap.get(r.post_id);
+        if (!post) return;
+        const prof = pmap.get(r.user_id);
+        entries.push({
+          key: `r-${r.user_id}-${r.post_id}`,
+          post,
+          sort_at: r.created_at,
+          repost_by: { user_id: r.user_id, name: prof?.name ?? null, created_at: r.created_at },
+        });
+      });
+      entries.sort((a, b) => +new Date(b.sort_at) - +new Date(a.sort_at));
+      return entries;
     },
   });
 
