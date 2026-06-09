@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export type YoutubeVideo = {
   id: string;
@@ -21,7 +22,9 @@ function pickAttr(xml: string, tag: string, attr: string): string {
   return m ? m[1] : "";
 }
 
-export const getYoutubeVideos = createServerFn({ method: "GET" }).handler(
+export const getYoutubeVideos = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(
   async (): Promise<YoutubeVideo[]> => {
     const res = await fetch(
       `https://www.youtube.com/feeds/videos.xml?channel_id=${CHANNEL_ID}`,
