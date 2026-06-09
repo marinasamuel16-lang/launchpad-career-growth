@@ -1,10 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNowStrict } from "date-fns";
-import { ArrowLeft, Heart, MessageCircle, Repeat2, Loader2 } from "lucide-react";
+import { ArrowLeft, Heart, MessageCircle, Repeat2, Loader2, MoreHorizontal, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import { BottomNav } from "@/components/BottomNav";
 import { useAuth } from "@/hooks/use-auth";
@@ -38,6 +46,12 @@ type Entry = {
 
 function MyPosts() {
   const { user } = useAuth();
+  const qc = useQueryClient();
+  const [confirm, setConfirm] = useState<
+    | { kind: "delete"; postId: string }
+    | { kind: "unrepost"; postId: string }
+    | null
+  >(null);
 
   const query = useQuery({
     queryKey: ["my-posts", user?.id],
@@ -109,6 +123,39 @@ function MyPosts() {
 
   const entries = useMemo(() => query.data ?? [], [query.data]);
 
+  const invalidateAll = () => {
+    qc.invalidateQueries({ queryKey: ["my-posts"] });
+    qc.invalidateQueries({ queryKey: ["posts"] });
+  };
+
+  const deletePost = useMutation({
+    mutationFn: async (postId: string) => {
+      if (!user) throw new Error("Not signed in");
+      const { error } = await supabase.from("posts").delete().eq("id", postId).eq("user_id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidateAll();
+      toast.success("Post deleted");
+      setConfirm(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const unrepost = useMutation({
+    mutationFn: async (postId: string) => {
+      if (!user) throw new Error("Not signed in");
+      const { error } = await supabase.from("post_reposts").delete().eq("post_id", postId).eq("user_id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidateAll();
+      toast.success("Repost removed");
+      setConfirm(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   return (
     <div className="min-h-screen pb-28">
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl">
@@ -135,6 +182,7 @@ function MyPosts() {
         )}
         {entries.map((entry) => {
           const p = entry.post;
+          const isOwnPost = !entry.is_repost && user?.id === p.user_id;
           return (
             <Card key={entry.key} className="p-4 shadow-sm">
               {entry.is_repost && (
@@ -151,9 +199,36 @@ function MyPosts() {
                   fallbackClassName="text-sm"
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-semibold text-sm">{p.profile?.name ?? "Member"}</span>
-                    <span className="text-xs text-muted-foreground">· {formatDistanceToNowStrict(new Date(p.created_at))} ago</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                      <span className="font-semibold text-sm truncate">{p.profile?.name ?? "Member"}</span>
+                      <span className="text-xs text-muted-foreground">· {formatDistanceToNowStrict(new Date(p.created_at))} ago</span>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {isOwnPost && (
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => setConfirm({ kind: "delete", postId: p.id })}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" /> Delete post
+                          </DropdownMenuItem>
+                        )}
+                        {entry.is_repost && (
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => setConfirm({ kind: "unrepost", postId: p.id })}
+                          >
+                            <Repeat2 className="h-4 w-4 mr-2" /> Remove repost
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                   <p className="text-xs text-muted-foreground">{p.profile?.role ?? "Early-career professional"}</p>
                   <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">{p.content}</p>
@@ -177,6 +252,35 @@ function MyPosts() {
           );
         })}
       </main>
+
+      <Dialog open={!!confirm} onOpenChange={(o) => !o && setConfirm(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {confirm?.kind === "delete" ? "Delete this post?" : "Remove this repost?"}
+            </DialogTitle>
+            <DialogDescription>
+              {confirm?.kind === "delete"
+                ? "This will permanently remove the post from your profile and the home feed. This action can't be undone."
+                : "This will remove the post from your reposts. The original post stays in the feed."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirm(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              disabled={deletePost.isPending || unrepost.isPending}
+              onClick={() => {
+                if (!confirm) return;
+                if (confirm.kind === "delete") deletePost.mutate(confirm.postId);
+                else unrepost.mutate(confirm.postId);
+              }}
+            >
+              {confirm?.kind === "delete" ? "Delete" : "Remove"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <BottomNav />
     </div>
