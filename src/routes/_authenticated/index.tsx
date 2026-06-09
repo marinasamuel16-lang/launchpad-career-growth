@@ -35,7 +35,7 @@ const FILTERS = [
   { id: "following", label: "Following", icon: Users },
 ] as const;
 
-type Post = {
+export type Post = {
   id: string;
   user_id: string;
   content: string;
@@ -47,6 +47,13 @@ type Post = {
   reposts: number;
   liked_by_me: boolean;
   reposted_by_me: boolean;
+};
+
+export type FeedEntry = {
+  key: string;
+  post: Post;
+  sort_at: string;
+  repost_by: { user_id: string; name: string | null; created_at: string } | null;
 };
 
 function initials(name?: string | null) {
