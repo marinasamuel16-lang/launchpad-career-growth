@@ -62,7 +62,16 @@ function Profile() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [levelUp, setLevelUp] = useState<number | null>(null);
   const [regenerating, setRegenerating] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
   const generateFn = useServerFn(generateRoadmap);
+  const deleteAccountFn = useServerFn(deleteAccount);
 
   const profileQuery = useQuery({
     queryKey: ["profile", user?.id],
