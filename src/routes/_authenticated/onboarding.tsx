@@ -84,14 +84,16 @@ function Onboarding() {
       if (!name.trim()) { toast.error("Please enter your name"); return; }
       await saveStep.mutateAsync({ name: name.trim() });
     } else if (step === 1) {
+      if (!role.trim()) { toast.error("Please enter your current role"); return; }
       await saveStep.mutateAsync({
-        role: role.trim() || null,
+        role: role.trim(),
         industry: industry.trim() || null,
         years_experience: years ? Number(years) : null,
       });
     } else if (step === 2) {
+      if (!goal.trim()) { toast.error("Please share your career goal"); return; }
       await saveStep.mutateAsync({
-        career_goal: goal.trim() || null,
+        career_goal: goal.trim(),
         linkedin_url: linkedin.trim() || null,
       });
     }
@@ -112,7 +114,7 @@ function Onboarding() {
     }
   };
 
-  const skip = () => nav({ to: "/profile" });
+  const skip = () => nav({ to: "/" });
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -132,7 +134,7 @@ function Onboarding() {
               />
             ))}
           </div>
-          <Button variant="ghost" size="sm" onClick={skip} className="text-xs text-muted-foreground">Skip</Button>
+          <div className="w-[60px]" />
         </div>
       </header>
 
@@ -168,7 +170,7 @@ function Onboarding() {
                 <p className="text-sm text-muted-foreground">This helps personalize your roadmap.</p>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="o-role">Current role</Label>
+                <Label htmlFor="o-role">Current role *</Label>
                 <Input id="o-role" value={role} onChange={(e) => setRole(e.target.value)} maxLength={120} placeholder="Product Marketing Associate" />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -191,7 +193,7 @@ function Onboarding() {
                 <p className="text-sm text-muted-foreground">Your long-term career goal.</p>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="o-goal">Career goal</Label>
+                <Label htmlFor="o-goal">Career goal *</Label>
                 <Textarea id="o-goal" value={goal} onChange={(e) => setGoal(e.target.value)} maxLength={200} rows={3} placeholder="Become a Director of Product Marketing in the next 5 years" />
               </div>
               <div className="space-y-1.5">
