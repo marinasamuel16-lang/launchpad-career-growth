@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   Check, CheckCircle2, Circle, Award, Target, Sparkles, Briefcase, TrendingUp,
   Calendar, Edit3, Plus, Trash2, Loader2, LogOut, Flame, Wand2,
+  Settings, Mail, KeyRound, AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
