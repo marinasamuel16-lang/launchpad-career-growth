@@ -134,7 +134,7 @@ function Onboarding() {
               />
             ))}
           </div>
-          <Button variant="ghost" size="sm" onClick={skip} className="text-xs text-muted-foreground">Skip</Button>
+          <div className="w-[60px]" />
         </div>
       </header>
 
