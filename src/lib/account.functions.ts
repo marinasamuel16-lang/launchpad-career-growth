@@ -6,6 +6,9 @@ export const deleteAccount = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.auth.admin.deleteUser(context.userId);
-    if (error) throw new Error(error.message);
+    // Treat "user not found" as success — account is already gone.
+    if (error && !/not\s*found/i.test(error.message)) {
+      throw new Error(error.message);
+    }
     return { ok: true };
   });
