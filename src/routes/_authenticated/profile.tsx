@@ -371,8 +371,8 @@ function Profile() {
             <Button variant="outline" size="sm" className="rounded-full gap-1.5" onClick={() => setEditProfile(true)}>
               <Edit3 className="h-3.5 w-3.5" /> Edit
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => signOut()} className="rounded-full gap-1.5">
-              <LogOut className="h-3.5 w-3.5" />
+            <Button variant="ghost" size="icon" onClick={() => setSettingsOpen(true)} className="rounded-full h-8 w-8" aria-label="Settings">
+              <Settings className="h-4 w-4" />
             </Button>
           </div>
         </div>
