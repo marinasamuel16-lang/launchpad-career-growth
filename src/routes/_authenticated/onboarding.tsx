@@ -193,7 +193,7 @@ function Onboarding() {
                 <p className="text-sm text-muted-foreground">Your long-term career goal.</p>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="o-goal">Career goal</Label>
+                <Label htmlFor="o-goal">Career goal *</Label>
                 <Textarea id="o-goal" value={goal} onChange={(e) => setGoal(e.target.value)} maxLength={200} rows={3} placeholder="Become a Director of Product Marketing in the next 5 years" />
               </div>
               <div className="space-y-1.5">
