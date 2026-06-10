@@ -6,11 +6,14 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) {
+    // Use getSession() (local, reads from storage) instead of getUser() (network).
+    // Network blips in the preview iframe were causing getUser() to fail and
+    // bounce signed-in users to /auth. Server functions re-validate the bearer token.
+    const { data } = await supabase.auth.getSession();
+    if (!data.session?.user) {
       throw redirect({ to: "/auth" });
     }
-    return { user: data.user };
+    return { user: data.session.user };
   },
   component: () => <Outlet />,
 });
