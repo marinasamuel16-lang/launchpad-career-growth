@@ -645,6 +645,124 @@ function Profile() {
         </DialogContent>
       </Dialog>
 
+      {/* Settings dialog */}
+      <Dialog open={settingsOpen} onOpenChange={(o) => { setSettingsOpen(o); if (!o) { setNewEmail(""); setNewPassword(""); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Settings className="h-4 w-4" /> Settings</DialogTitle></DialogHeader>
+          <div className="space-y-5">
+            <div className="rounded-lg border border-border/60 p-3 text-xs">
+              <p className="text-muted-foreground">Signed in as</p>
+              <p className="font-medium truncate">{user?.email}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="set-email" className="flex items-center gap-1.5 text-xs"><Mail className="h-3.5 w-3.5" /> Change email</Label>
+              <div className="flex gap-2">
+                <Input id="set-email" type="email" placeholder="new@email.com" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+                <Button
+                  size="sm"
+                  disabled={savingEmail || !newEmail.trim()}
+                  onClick={async () => {
+                    setSavingEmail(true);
+                    const { error } = await supabase.auth.updateUser({ email: newEmail.trim() });
+                    setSavingEmail(false);
+                    if (error) { toast.error(error.message); return; }
+                    toast.success("Check your new inbox to confirm.");
+                    setNewEmail("");
+                  }}
+                >
+                  {savingEmail ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Update"}
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="set-pw" className="flex items-center gap-1.5 text-xs"><KeyRound className="h-3.5 w-3.5" /> Change password</Label>
+              <div className="flex gap-2">
+                <Input id="set-pw" type="password" placeholder="New password (min 6)" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} minLength={6} />
+                <Button
+                  size="sm"
+                  disabled={savingPassword || newPassword.length < 6}
+                  onClick={async () => {
+                    setSavingPassword(true);
+                    const { error } = await supabase.auth.updateUser({ password: newPassword });
+                    setSavingPassword(false);
+                    if (error) { toast.error(error.message); return; }
+                    toast.success("Password updated.");
+                    setNewPassword("");
+                  }}
+                >
+                  {savingPassword ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Update"}
+                </Button>
+              </div>
+            </div>
+
+            <div className="border-t border-border/60 pt-4 space-y-2">
+              <Button
+                variant="outline"
+                className="w-full rounded-full gap-2"
+                onClick={async () => {
+                  setSettingsOpen(false);
+                  await signOut();
+                  nav({ to: "/auth", replace: true });
+                }}
+              >
+                <LogOut className="h-4 w-4" /> Sign out
+              </Button>
+              <Button
+                variant="destructive"
+                className="w-full rounded-full gap-2"
+                onClick={() => { setSettingsOpen(false); setDeleteOpen(true); }}
+              >
+                <Trash2 className="h-4 w-4" /> Delete account
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete account confirmation */}
+      <Dialog open={deleteOpen} onOpenChange={(o) => { setDeleteOpen(o); if (!o) setDeleteConfirm(""); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-4 w-4" /> Delete your account?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p className="text-muted-foreground">
+              This permanently deletes your profile, posts, roadmap, and all related data. This cannot be undone.
+            </p>
+            <div className="space-y-1.5">
+              <Label htmlFor="del-confirm" className="text-xs">Type <span className="font-mono font-semibold">DELETE</span> to confirm</Label>
+              <Input id="del-confirm" value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} autoComplete="off" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="rounded-full" onClick={() => setDeleteOpen(false)} disabled={deleting}>Cancel</Button>
+            <Button
+              variant="destructive"
+              className="rounded-full gap-2"
+              disabled={deleting || deleteConfirm !== "DELETE"}
+              onClick={async () => {
+                setDeleting(true);
+                try {
+                  await deleteAccountFn();
+                  await supabase.auth.signOut();
+                  toast.success("Account deleted.");
+                  nav({ to: "/auth", replace: true });
+                } catch (e: any) {
+                  setDeleting(false);
+                  toast.error(e?.message ?? "Failed to delete account");
+                }
+              }}
+            >
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Trash2 className="h-4 w-4" /> Delete forever</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <BottomNav />
     </div>
   );
