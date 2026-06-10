@@ -84,14 +84,16 @@ function Onboarding() {
       if (!name.trim()) { toast.error("Please enter your name"); return; }
       await saveStep.mutateAsync({ name: name.trim() });
     } else if (step === 1) {
+      if (!role.trim()) { toast.error("Please enter your current role"); return; }
       await saveStep.mutateAsync({
-        role: role.trim() || null,
+        role: role.trim(),
         industry: industry.trim() || null,
         years_experience: years ? Number(years) : null,
       });
     } else if (step === 2) {
+      if (!goal.trim()) { toast.error("Please share your career goal"); return; }
       await saveStep.mutateAsync({
-        career_goal: goal.trim() || null,
+        career_goal: goal.trim(),
         linkedin_url: linkedin.trim() || null,
       });
     }
