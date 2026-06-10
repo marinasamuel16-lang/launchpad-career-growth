@@ -114,7 +114,7 @@ function Onboarding() {
     }
   };
 
-  const skip = () => nav({ to: "/profile" });
+  const skip = () => nav({ to: "/" });
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
