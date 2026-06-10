@@ -170,7 +170,7 @@ function Onboarding() {
                 <p className="text-sm text-muted-foreground">This helps personalize your roadmap.</p>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="o-role">Current role</Label>
+                <Label htmlFor="o-role">Current role *</Label>
                 <Input id="o-role" value={role} onChange={(e) => setRole(e.target.value)} maxLength={120} placeholder="Product Marketing Associate" />
               </div>
               <div className="grid grid-cols-2 gap-3">
