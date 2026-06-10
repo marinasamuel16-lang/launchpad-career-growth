@@ -27,6 +27,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { awardXp, revokeXp, levelForXp, progressToNextLevel } from "@/lib/gamification";
 import { generateRoadmap } from "@/lib/ai-coach.functions";
+import { deleteAccount } from "@/lib/account.functions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/profile")({
