@@ -638,6 +638,9 @@ function CommentsDialog({ postId, onClose }: { postId: string | null; onClose: (
   const { user } = useAuth();
   const qc = useQueryClient();
   const [text, setText] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const commentsQuery = useQuery({
     queryKey: ["comments", postId],
@@ -676,6 +679,38 @@ function CommentsDialog({ postId, onClose }: { postId: string | null; onClose: (
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const updateComment = useMutation({
+    mutationFn: async ({ id, content }: { id: string; content: string }) => {
+      if (!user) throw new Error("Not signed in");
+      const trimmed = content.trim();
+      if (!trimmed) throw new Error("Comment can't be empty");
+      if (trimmed.length > 500) throw new Error("Keep it under 500 characters");
+      const { error } = await supabase.from("comments").update({ content: trimmed }).eq("id", id).eq("user_id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setEditingId(null);
+      qc.invalidateQueries({ queryKey: ["comments", postId] });
+      toast.success("Comment updated");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteComment = useMutation({
+    mutationFn: async (id: string) => {
+      if (!user) throw new Error("Not signed in");
+      const { error } = await supabase.from("comments").delete().eq("id", id).eq("user_id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setDeletingId(null);
+      qc.invalidateQueries({ queryKey: ["comments", postId] });
+      qc.invalidateQueries({ queryKey: ["posts"] });
+      toast.success("Comment deleted");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   return (
     <Dialog open={!!postId} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
@@ -685,24 +720,68 @@ function CommentsDialog({ postId, onClose }: { postId: string | null; onClose: (
           {commentsQuery.data?.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-6">No comments yet. Start the conversation.</p>
           )}
-          {commentsQuery.data?.map((c) => (
-            <div key={c.id} className="flex gap-2.5">
-              <UserAvatar
-                path={c.profile?.avatar_url}
-                name={c.profile?.name}
-                className="h-8 w-8 shrink-0"
-                fallbackClassName="text-xs"
-              />
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-xs font-semibold">{c.profile?.name ?? "Member"}</span>
-                  <span className="text-[10px] text-muted-foreground">{formatDistanceToNowStrict(new Date(c.created_at))} ago</span>
+          {commentsQuery.data?.map((c) => {
+            const mine = user?.id === c.user_id;
+            const isEditing = editingId === c.id;
+            return (
+              <div key={c.id} className="flex gap-2.5">
+                <UserAvatar
+                  path={c.profile?.avatar_url}
+                  name={c.profile?.name}
+                  className="h-8 w-8 shrink-0"
+                  fallbackClassName="text-xs"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-xs font-semibold">{c.profile?.name ?? "Member"}</span>
+                    <span className="text-[10px] text-muted-foreground">{formatDistanceToNowStrict(new Date(c.created_at))} ago</span>
+                    {mine && !isEditing && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button aria-label="Comment options" className="ml-auto rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                            <MoreHorizontal className="h-3.5 w-3.5" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-32">
+                          <DropdownMenuItem onClick={() => { setEditingId(c.id); setEditingText(c.content); }}>
+                            <Pencil className="h-3.5 w-3.5 mr-2" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setDeletingId(c.id)} className="text-destructive focus:text-destructive">
+                            <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
+                  {isEditing ? (
+                    <div className="mt-1 space-y-2">
+                      <Textarea
+                        value={editingText}
+                        onChange={(e) => setEditingText(e.target.value)}
+                        maxLength={500}
+                        className="min-h-[60px] resize-none text-sm"
+                      />
+                      <div className="flex items-center gap-1 justify-end">
+                        <Button variant="ghost" size="sm" className="h-7 gap-1" onClick={() => setEditingId(null)} disabled={updateComment.isPending}>
+                          <X className="h-3 w-3" /> Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="brand-gradient text-white rounded-full h-7 px-3 gap-1"
+                          disabled={!editingText.trim() || updateComment.isPending}
+                          onClick={() => updateComment.mutate({ id: c.id, content: editingText })}
+                        >
+                          {updateComment.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Check className="h-3 w-3" /> Save</>}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm mt-0.5 whitespace-pre-wrap">{c.content}</p>
+                  )}
                 </div>
-                <p className="text-sm mt-0.5 whitespace-pre-wrap">{c.content}</p>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <div className="flex gap-2 pt-2 border-t">
           <Textarea
@@ -721,6 +800,25 @@ function CommentsDialog({ postId, onClose }: { postId: string | null; onClose: (
             {addComment.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>
+
+        <Dialog open={deletingId != null} onOpenChange={(o) => !o && setDeletingId(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Delete this comment?</DialogTitle>
+              <DialogDescription>This can't be undone.</DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2 sm:gap-2">
+              <Button variant="ghost" onClick={() => setDeletingId(null)} disabled={deleteComment.isPending}>Cancel</Button>
+              <Button
+                variant="destructive"
+                onClick={() => deletingId && deleteComment.mutate(deletingId)}
+                disabled={deleteComment.isPending}
+              >
+                {deleteComment.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </DialogContent>
     </Dialog>
   );
