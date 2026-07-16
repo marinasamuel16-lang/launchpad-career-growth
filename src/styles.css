@@ -140,13 +140,33 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    /* iOS safe-area insets for notched devices wrapped in Capacitor.
+       Values are 0 in regular browsers, so desktop/web layout is unaffected. */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
     background-image:
       radial-gradient(at 0% 0%, oklch(0.75 0.22 300 / 0.4) 0px, transparent 50%),
       radial-gradient(at 100% 0%, oklch(0.7 0.24 285 / 0.35) 0px, transparent 50%),
       radial-gradient(at 50% 100%, oklch(0.78 0.2 325 / 0.3) 0px, transparent 50%);
     background-attachment: fixed;
   }
+
+  /* Push sticky top headers below the iOS status bar / notch. */
+  .sticky.top-0 {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  /* Push fixed top bars below the iOS status bar / notch. */
+  .fixed.top-0 {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  /* Lift fixed bottom bars above the iOS home indicator. */
+  .fixed.bottom-0 {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
+
 
 .brand-gradient {
   background-image: linear-gradient(135deg, oklch(0.5 0.26 285), oklch(0.55 0.24 305), oklch(0.6 0.22 330));
