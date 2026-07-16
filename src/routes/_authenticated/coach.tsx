@@ -77,7 +77,7 @@ function Coach() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col pb-28">
+    <div className="min-h-screen pb-[calc(9rem+env(safe-area-inset-bottom))]">
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
@@ -97,7 +97,8 @@ function Coach() {
         </div>
       </header>
 
-      <main ref={scrollRef} className="flex-1 mx-auto w-full max-w-2xl px-4 py-4 space-y-3 overflow-y-auto">
+      <main ref={scrollRef} className="mx-auto w-full max-w-2xl px-4 py-4 space-y-3">
+
         {messages.length === 0 && (
           <Card className="p-6 text-center space-y-4">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full brand-gradient">
@@ -151,7 +152,7 @@ function Coach() {
         )}
       </main>
 
-      <div className="fixed bottom-[64px] left-0 right-0 z-40 border-t border-border/60 bg-background/85 backdrop-blur-xl">
+      <div className="fixed bottom-[calc(64px+env(safe-area-inset-bottom))] left-0 right-0 z-40 border-t border-border/60 bg-background/85 backdrop-blur-xl">
         <div className="mx-auto max-w-2xl px-4 py-3">
           <div className="flex gap-2 items-end">
             <Textarea

@@ -321,7 +321,7 @@ function Home() {
   }, [postsQuery.data, filter, activeTag, followingQuery.data]);
 
   return (
-    <div className="min-h-screen pb-28">
+    <div className="min-h-screen pb-[calc(7rem+env(safe-area-inset-bottom))]">
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">

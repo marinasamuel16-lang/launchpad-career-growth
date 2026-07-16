@@ -161,10 +161,8 @@
     padding-top: env(safe-area-inset-top);
   }
 
-  /* Lift fixed bottom bars above the iOS home indicator. */
-  .fixed.bottom-0 {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
+  /* Fixed bottom bars manage their own safe-area padding in-component
+     to avoid double-padding (BottomNav already offsets the home indicator). */
 }
 
 
