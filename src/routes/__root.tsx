@@ -75,7 +75,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: "LaunchPad EIC — Career growth for early-career professionals" },
       { name: "description", content: "Ask real career questions, watch executive conversations, and track your career roadmap." },
       { name: "author", content: "LaunchPad EIC" },
