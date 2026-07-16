@@ -152,7 +152,7 @@ function Coach() {
         )}
       </main>
 
-      <div className="fixed bottom-[64px] left-0 right-0 z-40 border-t border-border/60 bg-background/85 backdrop-blur-xl">
+      <div className="fixed bottom-[calc(64px+env(safe-area-inset-bottom))] left-0 right-0 z-40 border-t border-border/60 bg-background/85 backdrop-blur-xl">
         <div className="mx-auto max-w-2xl px-4 py-3">
           <div className="flex gap-2 items-end">
             <Textarea
