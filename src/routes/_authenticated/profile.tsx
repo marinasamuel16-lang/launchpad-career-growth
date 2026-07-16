@@ -356,7 +356,7 @@ function Profile() {
   const streak = profile?.streak_days ?? 0;
 
   return (
-    <div className="min-h-screen pb-28">
+    <div className="min-h-screen pb-[calc(7rem+env(safe-area-inset-bottom))]">
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
           <h1 className="text-lg font-bold tracking-tight">Your Career Roadmap</h1>
