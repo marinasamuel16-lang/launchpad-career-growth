@@ -17,8 +17,31 @@ import { chatWithCoach, clearCoachHistory } from "@/lib/ai-coach.functions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/coach")({
-  component: Coach,
+  component: CoachGate,
 });
+
+function CoachGate() {
+  const { isSubscribed, isLoading } = useSubscription();
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!isSubscribed) {
+    return (
+      <div className="min-h-screen pb-[calc(9rem+env(safe-area-inset-bottom))]">
+        <CoachPaywall />
+        <BottomNav />
+      </div>
+    );
+  }
+
+  return <Coach />;
+}
 
 const QUICK_PROMPTS = [
   "What should I do this week?",
