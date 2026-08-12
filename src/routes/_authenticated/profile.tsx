@@ -64,6 +64,8 @@ function Profile() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [levelUp, setLevelUp] = useState<number | null>(null);
   const [regenerating, setRegenerating] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const { isSubscribed } = useSubscription();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
