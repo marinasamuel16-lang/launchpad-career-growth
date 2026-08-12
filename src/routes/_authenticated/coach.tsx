@@ -10,6 +10,8 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { BottomNav } from "@/components/BottomNav";
 import { useAuth } from "@/hooks/use-auth";
+import { useSubscription } from "@/hooks/use-subscription";
+import { CoachPaywall } from "@/components/CoachPaywall";
 import { supabase } from "@/integrations/supabase/client";
 import { chatWithCoach, clearCoachHistory } from "@/lib/ai-coach.functions";
 import { cn } from "@/lib/utils";
