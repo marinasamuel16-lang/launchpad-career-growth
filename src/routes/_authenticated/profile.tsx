@@ -24,6 +24,8 @@ import { NotificationsBell } from "@/components/NotificationsBell";
 import { AvatarUpload, getAvatarSignedUrl } from "@/components/AvatarUpload";
 import { LevelUpModal } from "@/components/LevelUpModal";
 import { useAuth } from "@/hooks/use-auth";
+import { useSubscription } from "@/hooks/use-subscription";
+import { CoachPaywall } from "@/components/CoachPaywall";
 import { supabase } from "@/integrations/supabase/client";
 import { awardXp, revokeXp, levelForXp, progressToNextLevel } from "@/lib/gamification";
 import { generateRoadmap } from "@/lib/ai-coach.functions";

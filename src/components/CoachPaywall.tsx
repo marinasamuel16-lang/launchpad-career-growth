@@ -66,7 +66,7 @@ export function CoachPaywall({
           </Button>
 
           <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground">
-            <Lock className="h-3 w-3" /> Secure billing. Only Career Coach is a paid feature.
+            <Lock className="h-3 w-3" /> Secure billing. The feed, roadmap tracking, and videos stay free.
           </p>
         </div>
       </Card>
