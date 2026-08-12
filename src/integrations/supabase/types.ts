@@ -453,7 +453,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      has_active_subscription: { Args: { _user_id: string }; Returns: boolean }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
