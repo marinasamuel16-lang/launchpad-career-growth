@@ -10,13 +10,38 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { BottomNav } from "@/components/BottomNav";
 import { useAuth } from "@/hooks/use-auth";
+import { useSubscription } from "@/hooks/use-subscription";
+import { CoachPaywall } from "@/components/CoachPaywall";
 import { supabase } from "@/integrations/supabase/client";
 import { chatWithCoach, clearCoachHistory } from "@/lib/ai-coach.functions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/coach")({
-  component: Coach,
+  component: CoachGate,
 });
+
+function CoachGate() {
+  const { isSubscribed, isLoading } = useSubscription();
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!isSubscribed) {
+    return (
+      <div className="min-h-screen pb-[calc(9rem+env(safe-area-inset-bottom))]">
+        <CoachPaywall />
+        <BottomNav />
+      </div>
+    );
+  }
+
+  return <Coach />;
+}
 
 const QUICK_PROMPTS = [
   "What should I do this week?",
