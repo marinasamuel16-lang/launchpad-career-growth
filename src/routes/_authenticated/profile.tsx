@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   Check, CheckCircle2, Circle, Award, Target, Sparkles, Briefcase, TrendingUp,
   Calendar, Edit3, Plus, Trash2, Loader2, LogOut, Flame, Wand2,
-  Settings, Mail, KeyRound, AlertTriangle,
+  Settings, Mail, KeyRound, AlertTriangle, Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -472,7 +472,13 @@ function Profile() {
             </h3>
             <div className="flex gap-1.5">
               <Button size="sm" variant="outline" className="rounded-full gap-1 text-xs" onClick={regenerate} disabled={regenerating}>
-                {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+                {regenerating ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : isSubscribed ? (
+                  <Wand2 className="h-3.5 w-3.5" />
+                ) : (
+                  <Lock className="h-3.5 w-3.5" />
+                )}
                 AI Regenerate
               </Button>
               <Button size="sm" variant="outline" className="rounded-full gap-1 text-xs" onClick={() => setAddMilestoneOpen(true)}>
