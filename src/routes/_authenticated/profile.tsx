@@ -777,6 +777,16 @@ function Profile() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={upgradeOpen} onOpenChange={setUpgradeOpen}>
+        <DialogContent className="max-w-md border-0 bg-transparent p-0 shadow-none">
+          <CoachPaywall
+            title="Unlock AI Roadmaps"
+            subtitle="AI roadmap generation is part of LaunchPad Pro"
+            className="w-full"
+          />
+        </DialogContent>
+      </Dialog>
+
       <BottomNav />
     </div>
   );
