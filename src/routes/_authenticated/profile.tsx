@@ -331,6 +331,10 @@ function Profile() {
   });
 
   const regenerate = async () => {
+    if (!isSubscribed) {
+      setUpgradeOpen(true);
+      return;
+    }
     if (!confirm("This will replace your current roadmap with a new AI-generated one. Continue?")) return;
     setRegenerating(true);
     try {
