@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   Check, CheckCircle2, Circle, Award, Target, Sparkles, Briefcase, TrendingUp,
   Calendar, Edit3, Plus, Trash2, Loader2, LogOut, Flame, Wand2,
-  Settings, Mail, KeyRound, AlertTriangle,
+  Settings, Mail, KeyRound, AlertTriangle, Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -331,6 +331,10 @@ function Profile() {
   });
 
   const regenerate = async () => {
+    if (!isSubscribed) {
+      setUpgradeOpen(true);
+      return;
+    }
     if (!confirm("This will replace your current roadmap with a new AI-generated one. Continue?")) return;
     setRegenerating(true);
     try {
@@ -468,7 +472,13 @@ function Profile() {
             </h3>
             <div className="flex gap-1.5">
               <Button size="sm" variant="outline" className="rounded-full gap-1 text-xs" onClick={regenerate} disabled={regenerating}>
-                {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+                {regenerating ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : isSubscribed ? (
+                  <Wand2 className="h-3.5 w-3.5" />
+                ) : (
+                  <Lock className="h-3.5 w-3.5" />
+                )}
                 AI Regenerate
               </Button>
               <Button size="sm" variant="outline" className="rounded-full gap-1 text-xs" onClick={() => setAddMilestoneOpen(true)}>
@@ -764,6 +774,16 @@ function Profile() {
               {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Trash2 className="h-4 w-4" /> Delete forever</>}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={upgradeOpen} onOpenChange={setUpgradeOpen}>
+        <DialogContent className="max-w-md border-0 bg-transparent p-0 shadow-none">
+          <CoachPaywall
+            title="Unlock AI Roadmaps"
+            subtitle="AI roadmap generation is part of LaunchPad Pro"
+            className="w-full"
+          />
         </DialogContent>
       </Dialog>
 
