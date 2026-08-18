@@ -196,6 +196,12 @@ function Coach() {
               {sendMessage.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </Button>
           </div>
+          <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+            LaunchPad Coach is an AI assistant, not a professional career counselor, therapist,
+            financial advisor, or attorney. Responses are for general informational purposes only
+            and should not be relied on as professional advice. Use your own judgment and consult a
+            qualified professional for important career, legal, or financial decisions.
+          </p>
         </div>
       </div>
 
