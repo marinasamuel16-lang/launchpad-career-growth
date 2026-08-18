@@ -179,7 +179,28 @@ function AuthPage() {
                   <Label htmlFor="su-password">Password</Label>
                   <Input id="su-password" name="password" type="password" autoComplete="new-password" required minLength={6} />
                 </div>
-                <Button type="submit" disabled={submitting} className="w-full brand-gradient text-white rounded-full mt-2">
+                <div className="flex items-start gap-2 rounded-lg border border-border/60 bg-muted/30 p-3">
+                  <Checkbox
+                    id="su-terms"
+                    checked={agreed}
+                    onCheckedChange={(v) => setAgreed(v === true)}
+                    className="mt-0.5"
+                  />
+                  <Label htmlFor="su-terms" className="text-[11px] font-normal leading-snug text-muted-foreground">
+                    I understand that LaunchPad EIC's AI Coach provides general information only,
+                    not professional advice, and that I am responsible for my own decisions. I agree
+                    to the{" "}
+                    <Link to="/terms" target="_blank" className="text-primary hover:underline">
+                      Terms of Service
+                    </Link>{" "}
+                    and{" "}
+                    <Link to="/privacy" target="_blank" className="text-primary hover:underline">
+                      Privacy Policy
+                    </Link>
+                    .
+                  </Label>
+                </div>
+                <Button type="submit" disabled={submitting || !agreed} className="w-full brand-gradient text-white rounded-full mt-2">
                   {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create account"}
                 </Button>
                 <p className="text-[11px] text-muted-foreground text-center">
