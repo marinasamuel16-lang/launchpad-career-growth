@@ -33,6 +33,7 @@ function AuthPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
+  const [agreed, setAgreed] = useState(false);
 
   useEffect(() => {
     if (!loading && user) navigate({ to: "/", replace: true });
@@ -48,6 +49,10 @@ function AuthPage() {
     });
     if (!parsed.success) {
       toast.error(parsed.error.issues[0].message);
+      return;
+    }
+    if (!agreed) {
+      toast.error("Please confirm the AI disclaimer and agree to the Terms and Privacy Policy.");
       return;
     }
     setSubmitting(true);
