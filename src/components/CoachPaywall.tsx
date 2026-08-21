@@ -76,9 +76,17 @@ export function CoachPaywall({
           <Button
             className="brand-gradient h-12 w-full rounded-full text-base font-semibold text-white"
             onClick={handleSubscribe}
+            disabled={loading}
           >
-            Subscribe — $4.99/mo
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> Redirecting…
+              </span>
+            ) : (
+              "Subscribe — $4.99/mo"
+            )}
           </Button>
+
 
           <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground">
             <Lock className="h-3 w-3" /> Secure billing. The feed, roadmap tracking, and videos stay free.
