@@ -1,7 +1,10 @@
-import { Sparkles, Check, Lock } from "lucide-react";
+import { useState } from "react";
+import { Sparkles, Check, Lock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { createCheckoutSession } from "@/lib/stripe.functions";
 
 const BENEFITS = [
   "Unlimited 1:1 chat with an AI coach that knows your roadmap",
@@ -21,9 +24,21 @@ export function CoachPaywall({
   subtitle = "Your personal AI coach and roadmap generator",
   className,
 }: Props) {
-  const handleSubscribe = () => {
-    toast.info("Checkout is coming soon — billing isn't connected yet.");
+  const [loading, setLoading] = useState(false);
+  const startCheckout = useServerFn(createCheckoutSession);
+
+  const handleSubscribe = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const { url } = await startCheckout({ data: { origin: window.location.origin } });
+      window.location.href = url;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not start checkout.");
+      setLoading(false);
+    }
   };
+
 
   return (
     <div className={className ?? "mx-auto w-full max-w-md px-4 py-8"}>
@@ -61,9 +76,17 @@ export function CoachPaywall({
           <Button
             className="brand-gradient h-12 w-full rounded-full text-base font-semibold text-white"
             onClick={handleSubscribe}
+            disabled={loading}
           >
-            Subscribe — $4.99/mo
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> Redirecting…
+              </span>
+            ) : (
+              "Subscribe — $4.99/mo"
+            )}
           </Button>
+
 
           <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground">
             <Lock className="h-3 w-3" /> Secure billing. The feed, roadmap tracking, and videos stay free.
