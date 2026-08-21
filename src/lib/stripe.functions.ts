@@ -51,7 +51,6 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     } else {
       const email = context.claims?.email;
       if (typeof email === "string" && email) body.set("customer_email", email);
-      body.set("customer_creation", "always");
     }
     if (profile?.name) body.set("metadata[name]", profile.name);
 
