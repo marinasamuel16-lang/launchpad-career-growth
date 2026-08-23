@@ -63,6 +63,57 @@ function initials(name?: string | null) {
   return (name || "?").split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
 }
 
+function NewsletterSignup() {
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubscribe = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = email.trim();
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+    setError(null);
+    window.open(SUBSTACK_URL, "_blank", "noopener,noreferrer");
+  };
+
+  return (
+    <Card className="overflow-hidden border-0 shadow-md shadow-primary/10">
+      <div className="brand-gradient px-5 py-4">
+        <div className="flex items-center gap-2 text-white">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 backdrop-blur">
+            <Mail className="h-4 w-4" />
+          </div>
+          <h2 className="text-sm font-bold tracking-tight">Subscribe to our Newsletter</h2>
+        </div>
+      </div>
+      <div className="p-4 space-y-3 bg-card">
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          Get episode recaps, extended guest insights, and career tips straight to your inbox.
+        </p>
+        <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row items-start gap-2">
+          <Input
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="h-10 flex-1 rounded-full border-border/60 bg-background px-4 text-sm"
+            aria-label="Email address"
+          />
+          <Button
+            type="submit"
+            className="brand-gradient h-10 w-full sm:w-auto rounded-full px-6 text-sm font-semibold text-white shadow-md shadow-primary/30"
+          >
+            Subscribe
+          </Button>
+        </form>
+        {error && <p className="text-xs text-destructive">{error}</p>}
+      </div>
+    </Card>
+  );
+}
+
 function Home() {
   const { user, signOut } = useAuth();
   const qc = useQueryClient();
