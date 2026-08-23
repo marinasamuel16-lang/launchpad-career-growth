@@ -36,6 +36,8 @@ const FILTERS = [
   { id: "following", label: "Following", icon: Users },
 ] as const;
 
+const SUBSTACK_URL = "https://launchpadeic.substack.com";
+
 export type Post = {
   id: string;
   user_id: string;
