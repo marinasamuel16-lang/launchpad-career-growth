@@ -423,6 +423,8 @@ function Home() {
           </button>
         )}
 
+        <NewsletterSignup />
+
         <Card className="p-4 shadow-sm">
           <div className="flex gap-3">
             <UserAvatar
