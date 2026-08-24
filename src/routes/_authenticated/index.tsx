@@ -1,881 +1,163 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Heart, MessageCircle, Repeat2, Share2, Sparkles, TrendingUp, Clock, LogOut, Loader2, Send, Users, UserPlus, UserCheck, Flame, MoreHorizontal, Pencil, Trash2, X, Check, Mail } from "lucide-react";
-import { toast } from "sonner";
-import { formatDistanceToNowStrict } from "date-fns";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { UserAvatar } from "@/components/UserAvatar";
-
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { Play, Youtube, Bell, Sparkles, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { BottomNav } from "@/components/BottomNav";
-import { NotificationsBell } from "@/components/NotificationsBell";
-import { LevelUpModal } from "@/components/LevelUpModal";
-import { useAuth } from "@/hooks/use-auth";
-import logo from "@/assets/logo.png";
-import { supabase } from "@/integrations/supabase/client";
-import { awardXp, todayISO } from "@/lib/gamification";
-import { cn } from "@/lib/utils";
+import { getYoutubeVideos } from "@/lib/youtube.functions";
 
+const CHANNEL_URL = "https://youtube.com/@launchpadeic";
 
-export const Route = createFileRoute("/_authenticated/")({
-  component: Home,
+export const Route = createFileRoute("/_authenticated/conversations")({
+  component: Conversations,
 });
 
-const TAGS = ["Promotions","Visibility","Networking","Interviews","Office Politics","Leadership","Burnout"];
-const FILTERS = [
-  { id: "trending", label: "Trending", icon: TrendingUp },
-  { id: "newest", label: "Newest", icon: Clock },
-  { id: "following", label: "Following", icon: Users },
-] as const;
-
-const SUBSTACK_URL = "https://launchpadeic.substack.com";
-
-export type Post = {
-  id: string;
-  user_id: string;
-  content: string;
-  topic: string;
-  created_at: string;
-  profile: { name: string | null; role: string | null; years_experience: number | null; avatar_url: string | null } | null;
-  likes: number;
-  comments: number;
-  reposts: number;
-  liked_by_me: boolean;
-  reposted_by_me: boolean;
-};
-
-export type FeedEntry = {
-  key: string;
-  post: Post;
-  sort_at: string;
-  repost_by: { user_id: string; name: string | null; created_at: string } | null;
-};
-
-function initials(name?: string | null) {
-  return (name || "?").split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
-}
-
-function NewsletterSignup() {
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSubscribe = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = email.trim();
-    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      setError("Please enter a valid email address.");
-      return;
-    }
-    setError(null);
-    window.open(SUBSTACK_URL, "_blank", "noopener,noreferrer");
-  };
-
-  return (
-    <Card className="overflow-hidden border-0 shadow-md shadow-primary/10">
-      <div className="brand-gradient px-5 py-4">
-        <div className="flex items-center gap-2 text-white">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 backdrop-blur">
-            <Mail className="h-4 w-4" />
-          </div>
-          <h2 className="text-sm font-bold tracking-tight">Subscribe to our Newsletter</h2>
-        </div>
-      </div>
-      <div className="p-4 space-y-3 bg-card">
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          Get episode recaps, extended guest insights, and career tips straight to your inbox.
-        </p>
-        <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row items-start gap-2">
-          <Input
-            type="email"
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="h-10 flex-1 rounded-full border-border/60 bg-background px-4 text-sm"
-            aria-label="Email address"
-          />
-          <Button
-            type="submit"
-            className="brand-gradient h-10 w-full sm:w-auto rounded-full px-6 text-sm font-semibold text-white shadow-md shadow-primary/30"
-          >
-            Subscribe
-          </Button>
-        </form>
-        {error && <p className="text-xs text-destructive">{error}</p>}
-      </div>
-    </Card>
-  );
-}
-
-function Home() {
-  const { user, signOut } = useAuth();
-  const qc = useQueryClient();
-  const [filter, setFilter] = useState<"trending" | "newest" | "following">("newest");
-  const [activeTag, setActiveTag] = useState<string | null>(null);
-  const [composer, setComposer] = useState("");
-  const [composerTopic, setComposerTopic] = useState<string>(TAGS[0]);
-  const [openComments, setOpenComments] = useState<string | null>(null);
-  const [levelUp, setLevelUp] = useState<number | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingContent, setEditingContent] = useState("");
-  const [editingTopic, setEditingTopic] = useState<string>(TAGS[0]);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  const profileQuery = useQuery({
-    queryKey: ["profile", user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("xp, streak_days, last_active_on, avatar_url, name").eq("id", user!.id).maybeSingle();
-      return data;
-    },
+function Conversations() {
+  const fetchVideos = useServerFn(getYoutubeVideos);
+  const videosQuery = useQuery({
+    queryKey: ["youtube-videos"],
+    queryFn: () => fetchVideos(),
+    staleTime: 5 * 60 * 1000,
   });
 
-  const dailyCheckin = useMutation({
-    mutationFn: async () => {
-      if (!user) throw new Error("Not signed in");
-      return awardXp({ userId: user.id, kind: "daily_checkin" });
-    },
-    onSuccess: (res) => {
-      qc.invalidateQueries({ queryKey: ["profile"] });
-      toast.success(`+5 XP · ${res.newStreak}-day streak 🔥`);
-      if (res.leveledUp) setLevelUp(res.newLevel);
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const checkedInToday = profileQuery.data?.last_active_on === todayISO();
-  const streakDays = profileQuery.data?.streak_days ?? 0;
-
-
-  const postsQuery = useQuery({
-    queryKey: ["posts", user?.id],
-    queryFn: async (): Promise<FeedEntry[]> => {
-      // Pull newest 100 posts + newest 100 reposts in parallel
-      const [postsRes, repostsNewestRes] = await Promise.all([
-        supabase.from("posts").select("id, user_id, content, topic, created_at").order("created_at", { ascending: false }).limit(100),
-        supabase.from("post_reposts").select("post_id, user_id, created_at").order("created_at", { ascending: false }).limit(100),
-      ]);
-      if (postsRes.error) throw postsRes.error;
-      if (repostsNewestRes.error) throw repostsNewestRes.error;
-      let posts = postsRes.data ?? [];
-      const repostsNewest = repostsNewestRes.data ?? [];
-
-      // Make sure we have the underlying post for every recent repost
-      const havePostIds = new Set(posts.map((p) => p.id));
-      const missingIds = [...new Set(repostsNewest.map((r) => r.post_id).filter((id) => !havePostIds.has(id)))];
-      if (missingIds.length > 0) {
-        const { data: extra } = await supabase.from("posts").select("id, user_id, content, topic, created_at").in("id", missingIds);
-        posts = [...posts, ...(extra ?? [])];
-      }
-      if (posts.length === 0) return [];
-
-      const ids = posts.map((p) => p.id);
-      const userIds = [...new Set([...posts.map((p) => p.user_id), ...repostsNewest.map((r) => r.user_id)])];
-      const [profilesRes, likesRes, commentsRes, repostsAllRes, myLikesRes, myRepostsRes] = await Promise.all([
-        supabase.from("profiles").select("id, name, role, years_experience, avatar_url").in("id", userIds),
-        supabase.from("post_likes").select("post_id").in("post_id", ids),
-        supabase.from("comments").select("post_id").in("post_id", ids),
-        supabase.from("post_reposts").select("post_id").in("post_id", ids),
-        user
-          ? supabase.from("post_likes").select("post_id").in("post_id", ids).eq("user_id", user.id)
-          : Promise.resolve({ data: [] as { post_id: string }[] }),
-        user
-          ? supabase.from("post_reposts").select("post_id").in("post_id", ids).eq("user_id", user.id)
-          : Promise.resolve({ data: [] as { post_id: string }[] }),
-      ]);
-      const pmap = new Map((profilesRes.data ?? []).map((p) => [p.id, p]));
-      const likeCounts = new Map<string, number>();
-      (likesRes.data ?? []).forEach((l) => likeCounts.set(l.post_id, (likeCounts.get(l.post_id) ?? 0) + 1));
-      const commentCounts = new Map<string, number>();
-      (commentsRes.data ?? []).forEach((c) => commentCounts.set(c.post_id, (commentCounts.get(c.post_id) ?? 0) + 1));
-      const repostCounts = new Map<string, number>();
-      (repostsAllRes.data ?? []).forEach((r) => repostCounts.set(r.post_id, (repostCounts.get(r.post_id) ?? 0) + 1));
-      const mineSet = new Set((myLikesRes.data ?? []).map((l) => l.post_id));
-      const myRepostsSet = new Set((myRepostsRes.data ?? []).map((r) => r.post_id));
-
-      const postMap = new Map<string, Post>();
-      posts.forEach((p) => {
-        postMap.set(p.id, {
-          ...p,
-          profile: pmap.get(p.user_id) ?? null,
-          likes: likeCounts.get(p.id) ?? 0,
-          comments: commentCounts.get(p.id) ?? 0,
-          reposts: repostCounts.get(p.id) ?? 0,
-          liked_by_me: mineSet.has(p.id),
-          reposted_by_me: myRepostsSet.has(p.id),
-        });
-      });
-
-      const entries: FeedEntry[] = [];
-      postMap.forEach((post) => {
-        entries.push({ key: `p-${post.id}`, post, sort_at: post.created_at, repost_by: null });
-      });
-      repostsNewest.forEach((r) => {
-        const post = postMap.get(r.post_id);
-        if (!post) return;
-        const prof = pmap.get(r.user_id);
-        entries.push({
-          key: `r-${r.user_id}-${r.post_id}`,
-          post,
-          sort_at: r.created_at,
-          repost_by: { user_id: r.user_id, name: prof?.name ?? null, created_at: r.created_at },
-        });
-      });
-      entries.sort((a, b) => +new Date(b.sort_at) - +new Date(a.sort_at));
-      return entries;
-    },
-  });
-
-  const createPost = useMutation({
-    mutationFn: async () => {
-      if (!user) throw new Error("Not signed in");
-      const content = composer.trim();
-      if (!content) throw new Error("Write something first");
-      if (content.length > 1000) throw new Error("Keep it under 1000 characters");
-      const { error } = await supabase.from("posts").insert({ user_id: user.id, content, topic: composerTopic });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      setComposer("");
-      qc.invalidateQueries({ queryKey: ["posts"] });
-      toast.success("Posted!");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const updatePost = useMutation({
-    mutationFn: async ({ postId, content, topic }: { postId: string; content: string; topic: string }) => {
-      if (!user) throw new Error("Not signed in");
-      const trimmed = content.trim();
-      if (!trimmed) throw new Error("Post can't be empty");
-      if (trimmed.length > 1000) throw new Error("Keep it under 1000 characters");
-      const { error } = await supabase.from("posts").update({ content: trimmed, topic }).eq("id", postId).eq("user_id", user.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      setEditingId(null);
-      qc.invalidateQueries({ queryKey: ["posts"] });
-      toast.success("Post updated");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const deletePost = useMutation({
-    mutationFn: async (postId: string) => {
-      if (!user) throw new Error("Not signed in");
-      const { error } = await supabase.from("posts").delete().eq("id", postId).eq("user_id", user.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      setDeletingId(null);
-      qc.invalidateQueries({ queryKey: ["posts"] });
-      toast.success("Post deleted");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const toggleLike = useMutation({
-    mutationFn: async ({ postId, liked }: { postId: string; liked: boolean }) => {
-      if (!user) throw new Error("Not signed in");
-      if (liked) {
-        const { error } = await supabase.from("post_likes").delete().eq("post_id", postId).eq("user_id", user.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("post_likes").insert({ post_id: postId, user_id: user.id });
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["posts"] }),
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const toggleRepost = useMutation({
-    mutationFn: async ({ postId, reposted }: { postId: string; reposted: boolean }) => {
-      if (!user) throw new Error("Not signed in");
-      if (reposted) {
-        const { error } = await supabase.from("post_reposts").delete().eq("post_id", postId).eq("user_id", user.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("post_reposts").insert({ post_id: postId, user_id: user.id });
-        if (error) throw error;
-      }
-    },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ["posts"] });
-      toast.success(vars.reposted ? "Repost removed" : "Reposted");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const sharePost = async (postId: string, authorName?: string | null) => {
-    const url = `${window.location.origin}/?post=${postId}`;
-    const shareData = { title: "LaunchPad EIC", text: authorName ? `Check out ${authorName}'s post on LaunchPad EIC` : "Check out this post on LaunchPad EIC", url };
-    try {
-      if (typeof navigator !== "undefined" && navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        await navigator.clipboard.writeText(url);
-        toast.success("Link copied to clipboard");
-      }
-    } catch (err) {
-      if ((err as Error)?.name !== "AbortError") {
-        try {
-          await navigator.clipboard.writeText(url);
-          toast.success("Link copied to clipboard");
-        } catch {
-          toast.error("Could not share post");
-        }
-      }
-    }
-  };
-  const followingQuery = useQuery({
-    queryKey: ["following", user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      const { data, error } = await supabase.from("follows").select("following_id").eq("follower_id", user!.id);
-      if (error) throw error;
-      return new Set((data ?? []).map((f) => f.following_id));
-    },
-  });
-
-  const toggleFollow = useMutation({
-    mutationFn: async ({ targetId, following }: { targetId: string; following: boolean }) => {
-      if (!user) throw new Error("Not signed in");
-      if (following) {
-        const { error } = await supabase.from("follows").delete().eq("follower_id", user.id).eq("following_id", targetId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("follows").insert({ follower_id: user.id, following_id: targetId });
-        if (error) throw error;
-      }
-    },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ["following"] });
-      toast.success(vars.following ? "Unfollowed" : "Followed");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const visible = useMemo(() => {
-    let list = postsQuery.data ?? [];
-    if (activeTag) list = list.filter((e) => e.post.topic === activeTag);
-    if (filter === "following") {
-      const set = followingQuery.data ?? new Set<string>();
-      list = list.filter((e) => set.has(e.post.user_id) || (e.repost_by && set.has(e.repost_by.user_id)));
-    }
-    if (filter === "trending") list = [...list].sort((a, b) => (b.post.likes + b.post.comments) - (a.post.likes + a.post.comments));
-    return list;
-  }, [postsQuery.data, filter, activeTag, followingQuery.data]);
+  const videos = videosQuery.data ?? [];
+  const featured = videos[0];
+  const others = videos.slice(1);
 
   return (
     <div className="min-h-screen pb-[calc(7rem+env(safe-area-inset-bottom))]">
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2">
-            <img src={logo} alt="LaunchPad EIC" className="h-10 w-auto object-contain" />
-            <h1 className="text-lg font-bold tracking-tight">
-              LaunchPad <span className="brand-gradient-text">EIC</span>
-            </h1>
+          <div>
+            <h1 className="text-lg font-bold tracking-tight">Career Conversations</h1>
+            <p className="text-xs text-muted-foreground">Latest from @launchpadeic</p>
           </div>
-          <div className="flex items-center gap-1">
-            <NotificationsBell />
-            <Button variant="ghost" size="sm" onClick={() => signOut()} className="gap-1.5 text-xs">
-              <LogOut className="h-3.5 w-3.5" /> Sign out
-            </Button>
-          </div>
+          <Button size="sm" variant="outline" className="rounded-full gap-1.5" asChild>
+            <a href={CHANNEL_URL} target="_blank" rel="noreferrer">
+              <Bell className="h-3.5 w-3.5" /> Subscribe
+            </a>
+          </Button>
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl px-4 py-4 space-y-4">
-        {user && (
-          <button
-            type="button"
-            disabled={checkedInToday || dailyCheckin.isPending}
-            onClick={() => dailyCheckin.mutate()}
-            className={cn(
-              "w-full flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 transition-all text-left",
-              checkedInToday
-                ? "bg-amber-500/10 border-amber-500/30"
-                : "brand-gradient text-white border-transparent shadow-md shadow-primary/30 hover:scale-[1.01]",
-            )}
-          >
-            <div className="flex items-center gap-3">
-              <Flame className={cn("h-5 w-5", checkedInToday ? "text-amber-600" : "text-white")} />
-              <div>
-                <p className={cn("text-sm font-semibold", checkedInToday ? "text-amber-700 dark:text-amber-400" : "text-white")}>
-                  {checkedInToday ? `${streakDays}-day streak` : "Check in for today"}
-                </p>
-                <p className={cn("text-[11px]", checkedInToday ? "text-amber-700/70 dark:text-amber-400/70" : "text-white/80")}>
-                  {checkedInToday ? "Come back tomorrow to keep it going" : "+5 XP and grow your streak"}
-                </p>
-              </div>
-            </div>
-            {!checkedInToday && (
-              <span className="text-xs font-semibold bg-white/20 rounded-full px-3 py-1">+5 XP</span>
-            )}
-          </button>
+      <main className="mx-auto max-w-2xl px-4 py-4 space-y-5">
+        {videosQuery.isLoading && (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          </div>
         )}
 
-        <NewsletterSignup />
+        {!videosQuery.isLoading && videos.length === 0 && (
+          <Card className="p-6 text-center space-y-3">
+            <Youtube className="h-10 w-10 mx-auto text-primary" />
+            <h3 className="font-semibold">No videos yet</h3>
+            <p className="text-sm text-muted-foreground">
+              New episodes from @launchpadeic will appear here automatically.
+            </p>
+            <Button className="brand-gradient text-white rounded-full gap-2" asChild>
+              <a href={CHANNEL_URL} target="_blank" rel="noreferrer">
+                <Youtube className="h-4 w-4" /> Visit channel
+              </a>
+            </Button>
+          </Card>
+        )}
 
-        <Card className="p-4 shadow-sm">
-          <div className="flex gap-3">
-            <UserAvatar
-              path={profileQuery.data?.avatar_url}
-              name={(profileQuery.data?.name as string | undefined) ?? (user?.user_metadata?.name as string | undefined) ?? user?.email}
-              className="h-10 w-10"
-            />
-
-            <div className="flex-1 space-y-3">
-              <Textarea
-                value={composer}
-                onChange={(e) => setComposer(e.target.value)}
-                placeholder="Ask a career question…"
-                maxLength={1000}
-                className="min-h-[60px] resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 text-base"
-              />
-              <div className="flex items-center justify-between gap-2">
-                <Select value={composerTopic} onValueChange={setComposerTopic}>
-                  <SelectTrigger className="w-[160px] h-8 rounded-full text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TAGS.map((t) => <SelectItem key={t} value={t}>#{t}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Button
-                  size="sm"
-                  className="brand-gradient text-white rounded-full px-5 shadow-md shadow-primary/30"
-                  disabled={!composer.trim() || createPost.isPending}
-                  onClick={() => createPost.mutate()}
-                >
-                  {createPost.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Post"}
+        {featured && (
+          <div>
+            <div className="flex items-center gap-1.5 mb-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-semibold">Latest episode</h2>
+            </div>
+            <Card className="overflow-hidden shadow-md hover:shadow-xl transition-shadow group">
+              <a href={featured.url} target="_blank" rel="noreferrer" className="block">
+                <div className="relative aspect-video bg-muted">
+                  <img
+                    src={featured.thumbnail}
+                    alt={featured.title}
+                    className="absolute inset-0 h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-black/20" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/95 shadow-xl group-hover:scale-110 transition-transform">
+                      <Play className="h-7 w-7 text-primary fill-primary ml-1" />
+                    </div>
+                  </div>
+                  <Badge className="absolute top-3 left-3 brand-gradient text-white border-0">
+                    Latest
+                  </Badge>
+                </div>
+              </a>
+              <div className="p-4 space-y-2">
+                <h3 className="font-semibold leading-snug">{featured.title}</h3>
+                {featured.description && (
+                  <p className="text-sm text-muted-foreground line-clamp-3">
+                    {featured.description}
+                  </p>
+                )}
+                <Button className="brand-gradient text-white rounded-full w-full mt-1 gap-2" asChild>
+                  <a href={featured.url} target="_blank" rel="noreferrer">
+                    <Youtube className="h-4 w-4" /> Watch on YouTube
+                  </a>
                 </Button>
               </div>
-            </div>
-          </div>
-        </Card>
-
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-          {FILTERS.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => setFilter(id)}
-              className={cn(
-                "flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-all whitespace-nowrap",
-                filter === id
-                  ? "brand-gradient text-white shadow-md shadow-primary/20"
-                  : "bg-card text-muted-foreground hover:text-foreground border border-border/60",
-              )}
-            >
-              <Icon className="h-3.5 w-3.5" /> {label}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-          <button
-            onClick={() => setActiveTag(null)}
-            className={cn(
-              "rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap transition-all",
-              activeTag === null ? "bg-foreground text-background" : "bg-card border border-border/60 text-muted-foreground hover:text-foreground",
-            )}
-          >All topics</button>
-          {TAGS.map((t) => (
-            <button
-              key={t}
-              onClick={() => setActiveTag(t === activeTag ? null : t)}
-              className={cn(
-                "rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap transition-all",
-                activeTag === t ? "bg-foreground text-background" : "bg-card border border-border/60 text-muted-foreground hover:text-foreground",
-              )}
-            >{t}</button>
-          ))}
-        </div>
-
-        <div className="space-y-3">
-          {postsQuery.isLoading && (
-            <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
-          )}
-          {!postsQuery.isLoading && visible.length === 0 && (
-            <Card className="p-8 text-center text-sm text-muted-foreground">
-              No posts yet — be the first to ask a question.
             </Card>
-          )}
-          {visible.map((entry) => {
-            const p = entry.post;
-            return (
-            <Card key={entry.key} className="p-4 shadow-sm hover:shadow-md transition-shadow">
-              {entry.repost_by && (
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
-                  <Repeat2 className="h-3.5 w-3.5 text-green-600" />
-                  <span>
-                    {user && entry.repost_by.user_id === user.id ? "You" : (entry.repost_by.name ?? "Someone")} reposted
-                    {" · "}{formatDistanceToNowStrict(new Date(entry.repost_by.created_at))} ago
-                  </span>
-                </div>
-              )}
-              <div className="flex gap-3">
-                <UserAvatar
-                  path={p.profile?.avatar_url}
-                  name={p.profile?.name}
-                  className="h-10 w-10 shrink-0"
-                  fallbackClassName="text-sm"
-                />
+          </div>
+        )}
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-semibold text-sm">{p.profile?.name ?? "Member"}</span>
-                    <span className="text-xs text-muted-foreground">· {formatDistanceToNowStrict(new Date(p.created_at))} ago</span>
-                    {user && p.user_id !== user.id && (() => {
-                      const isFollowing = followingQuery.data?.has(p.user_id) ?? false;
-                      return (
-                        <button
-                          onClick={() => toggleFollow.mutate({ targetId: p.user_id, following: isFollowing })}
-                          className={cn(
-                            "ml-auto flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors",
-                            isFollowing
-                              ? "bg-card border border-border/60 text-muted-foreground hover:text-foreground"
-                              : "brand-gradient text-white shadow-sm shadow-primary/30",
-                          )}
-                        >
-                          {isFollowing ? <><UserCheck className="h-3 w-3" /> Following</> : <><UserPlus className="h-3 w-3" /> Follow</>}
-                        </button>
-                      );
-                    })()}
-                    {user && p.user_id === user.id && !entry.repost_by && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button
-                            aria-label="Post options"
-                            className="ml-auto rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-36">
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setEditingId(p.id);
-                              setEditingContent(p.content);
-                              setEditingTopic(p.topic);
-                            }}
-                          >
-                            <Pencil className="h-4 w-4 mr-2" /> Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => setDeletingId(p.id)}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {p.profile?.role ?? "Early-career professional"}
-                    {p.profile?.years_experience != null && ` · ${p.profile.years_experience}y exp`}
-                  </p>
-                  {editingId === p.id ? (
-                    <div className="mt-2 space-y-2">
-                      <Textarea
-                        value={editingContent}
-                        onChange={(e) => setEditingContent(e.target.value)}
-                        maxLength={1000}
-                        className="min-h-[80px] resize-none text-sm"
-                      />
-                      <div className="flex items-center justify-between gap-2">
-                        <Select value={editingTopic} onValueChange={setEditingTopic}>
-                          <SelectTrigger className="w-[160px] h-8 rounded-full text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {TAGS.map((t) => <SelectItem key={t} value={t}>#{t}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setEditingId(null)}
-                            disabled={updatePost.isPending}
-                            className="gap-1 h-8"
-                          >
-                            <X className="h-3.5 w-3.5" /> Cancel
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="brand-gradient text-white rounded-full px-4 h-8 gap-1"
-                            disabled={!editingContent.trim() || updatePost.isPending}
-                            onClick={() => updatePost.mutate({ postId: p.id, content: editingContent, topic: editingTopic })}
-                          >
-                            {updatePost.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Check className="h-3.5 w-3.5" /> Save</>}
-                          </Button>
-                        </div>
+        {others.length > 0 && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {others.map((v) => (
+              <Card key={v.id} className="overflow-hidden shadow-sm hover:shadow-lg transition-all group">
+                <a href={v.url} target="_blank" rel="noreferrer" className="block">
+                  <div className="relative aspect-video bg-muted">
+                    <img
+                      src={v.thumbnail}
+                      alt={v.title}
+                      className="absolute inset-0 h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-black/20" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/95 shadow-lg group-hover:scale-110 transition-transform">
+                        <Play className="h-5 w-5 text-primary fill-primary ml-0.5" />
                       </div>
                     </div>
-                  ) : (
-                    <>
-                      <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">{p.content}</p>
-                      <div className="mt-3 flex items-center gap-2">
-                        <Badge variant="secondary" className="rounded-full text-xs">#{p.topic}</Badge>
-                      </div>
-                    </>
-                  )}
-                  <div className="mt-3 flex items-center gap-6 text-muted-foreground">
-                    <button
-                      onClick={() => toggleLike.mutate({ postId: p.id, liked: p.liked_by_me })}
-                      className={cn("flex items-center gap-1.5 text-xs hover:text-primary transition-colors", p.liked_by_me && "text-primary")}
-                    >
-                      <Heart className={cn("h-4 w-4", p.liked_by_me && "fill-current")} /> {p.likes}
-                    </button>
-                    <button onClick={() => setOpenComments(p.id)} className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors">
-                      <MessageCircle className="h-4 w-4" /> {p.comments}
-                    </button>
-                    <button
-                      onClick={() => toggleRepost.mutate({ postId: p.id, reposted: p.reposted_by_me })}
-                      className={cn("flex items-center gap-1.5 text-xs hover:text-green-600 transition-colors", p.reposted_by_me && "text-green-600")}
-                    >
-                      <Repeat2 className="h-4 w-4" /> {p.reposts > 0 ? p.reposts : ""}
-                    </button>
-                    <button
-                      onClick={() => sharePost(p.id, p.profile?.name)}
-                      className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors"
-                    >
-                      <Share2 className="h-4 w-4" />
-                    </button>
                   </div>
-
+                </a>
+                <div className="p-3 space-y-2">
+                  <h3 className="font-semibold text-sm leading-snug line-clamp-2">{v.title}</h3>
+                  {v.description && (
+                    <p className="text-xs text-muted-foreground line-clamp-2">{v.description}</p>
+                  )}
+                  <Button size="sm" variant="outline" className="w-full rounded-full gap-1.5 text-xs" asChild>
+                    <a href={v.url} target="_blank" rel="noreferrer">
+                      <Youtube className="h-3.5 w-3.5 text-red-500" /> Watch
+                    </a>
+                  </Button>
                 </div>
-              </div>
-            </Card>
-            );
-          })}
-        </div>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        <Card className="p-6 text-center brand-gradient text-white border-0 shadow-lg shadow-primary/20">
+          <Youtube className="h-10 w-10 mx-auto mb-2" />
+          <h3 className="font-bold text-lg">Subscribe to Launchpad EIC</h3>
+          <p className="text-sm text-white/80 mt-1 mb-4">
+            New conversations every week. Real answers from people who've done it.
+          </p>
+          <Button variant="secondary" className="rounded-full gap-2 font-semibold" asChild>
+            <a href={CHANNEL_URL} target="_blank" rel="noreferrer">
+              <Youtube className="h-4 w-4 text-red-500" /> Subscribe on YouTube
+            </a>
+          </Button>
+        </Card>
       </main>
 
-      <CommentsDialog postId={openComments} onClose={() => setOpenComments(null)} />
-      <LevelUpModal level={levelUp ?? 0} open={levelUp != null} onClose={() => setLevelUp(null)} />
-
-      <Dialog open={deletingId != null} onOpenChange={(o) => !o && setDeletingId(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Delete this post?</DialogTitle>
-            <DialogDescription>This can't be undone. Likes, comments, and reposts will also be removed.</DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-2">
-            <Button variant="ghost" onClick={() => setDeletingId(null)} disabled={deletePost.isPending}>Cancel</Button>
-            <Button
-              variant="destructive"
-              onClick={() => deletingId && deletePost.mutate(deletingId)}
-              disabled={deletePost.isPending}
-            >
-              {deletePost.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <BottomNav />
-
     </div>
-  );
-}
-
-function CommentsDialog({ postId, onClose }: { postId: string | null; onClose: () => void }) {
-  const { user } = useAuth();
-  const qc = useQueryClient();
-  const [text, setText] = useState("");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingText, setEditingText] = useState("");
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  const commentsQuery = useQuery({
-    queryKey: ["comments", postId],
-    enabled: !!postId,
-    queryFn: async () => {
-      const { data: comments, error } = await supabase
-        .from("comments")
-        .select("id, user_id, content, created_at")
-        .eq("post_id", postId!)
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      const userIds = [...new Set((comments ?? []).map((c) => c.user_id))];
-      const { data: profiles } = userIds.length
-        ? await supabase.from("profiles").select("id, name, role, avatar_url").in("id", userIds)
-        : { data: [] as { id: string; name: string | null; role: string | null; avatar_url: string | null }[] };
-
-      const pmap = new Map((profiles ?? []).map((p) => [p.id, p]));
-      return (comments ?? []).map((c) => ({ ...c, profile: pmap.get(c.user_id) ?? null }));
-    },
-  });
-
-  const addComment = useMutation({
-    mutationFn: async () => {
-      if (!user || !postId) throw new Error("Not signed in");
-      const content = text.trim();
-      if (!content) throw new Error("Write a comment first");
-      if (content.length > 500) throw new Error("Keep it under 500 characters");
-      const { error } = await supabase.from("comments").insert({ post_id: postId, user_id: user.id, content });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      setText("");
-      qc.invalidateQueries({ queryKey: ["comments", postId] });
-      qc.invalidateQueries({ queryKey: ["posts"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const updateComment = useMutation({
-    mutationFn: async ({ id, content }: { id: string; content: string }) => {
-      if (!user) throw new Error("Not signed in");
-      const trimmed = content.trim();
-      if (!trimmed) throw new Error("Comment can't be empty");
-      if (trimmed.length > 500) throw new Error("Keep it under 500 characters");
-      const { error } = await supabase.from("comments").update({ content: trimmed }).eq("id", id).eq("user_id", user.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      setEditingId(null);
-      qc.invalidateQueries({ queryKey: ["comments", postId] });
-      toast.success("Comment updated");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const deleteComment = useMutation({
-    mutationFn: async (id: string) => {
-      if (!user) throw new Error("Not signed in");
-      const { error } = await supabase.from("comments").delete().eq("id", id).eq("user_id", user.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      setDeletingId(null);
-      qc.invalidateQueries({ queryKey: ["comments", postId] });
-      qc.invalidateQueries({ queryKey: ["posts"] });
-      toast.success("Comment deleted");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  return (
-    <Dialog open={!!postId} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
-        <DialogHeader><DialogTitle>Comments</DialogTitle></DialogHeader>
-        <div className="flex-1 overflow-y-auto space-y-3 min-h-[120px]">
-          {commentsQuery.isLoading && <div className="flex justify-center py-6"><Loader2 className="h-4 w-4 animate-spin text-primary" /></div>}
-          {commentsQuery.data?.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-6">No comments yet. Start the conversation.</p>
-          )}
-          {commentsQuery.data?.map((c) => {
-            const mine = user?.id === c.user_id;
-            const isEditing = editingId === c.id;
-            return (
-              <div key={c.id} className="flex gap-2.5">
-                <UserAvatar
-                  path={c.profile?.avatar_url}
-                  name={c.profile?.name}
-                  className="h-8 w-8 shrink-0"
-                  fallbackClassName="text-xs"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-xs font-semibold">{c.profile?.name ?? "Member"}</span>
-                    <span className="text-[10px] text-muted-foreground">{formatDistanceToNowStrict(new Date(c.created_at))} ago</span>
-                    {mine && !isEditing && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button aria-label="Comment options" className="ml-auto rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-                            <MoreHorizontal className="h-3.5 w-3.5" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-32">
-                          <DropdownMenuItem onClick={() => { setEditingId(c.id); setEditingText(c.content); }}>
-                            <Pencil className="h-3.5 w-3.5 mr-2" /> Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setDeletingId(c.id)} className="text-destructive focus:text-destructive">
-                            <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                  {isEditing ? (
-                    <div className="mt-1 space-y-2">
-                      <Textarea
-                        value={editingText}
-                        onChange={(e) => setEditingText(e.target.value)}
-                        maxLength={500}
-                        className="min-h-[60px] resize-none text-sm"
-                      />
-                      <div className="flex items-center gap-1 justify-end">
-                        <Button variant="ghost" size="sm" className="h-7 gap-1" onClick={() => setEditingId(null)} disabled={updateComment.isPending}>
-                          <X className="h-3 w-3" /> Cancel
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="brand-gradient text-white rounded-full h-7 px-3 gap-1"
-                          disabled={!editingText.trim() || updateComment.isPending}
-                          onClick={() => updateComment.mutate({ id: c.id, content: editingText })}
-                        >
-                          {updateComment.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Check className="h-3 w-3" /> Save</>}
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-sm mt-0.5 whitespace-pre-wrap">{c.content}</p>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <div className="flex gap-2 pt-2 border-t">
-          <Textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Add a comment…"
-            maxLength={500}
-            className="min-h-[44px] resize-none text-sm"
-          />
-          <Button
-            size="icon"
-            className="brand-gradient text-white shrink-0 rounded-full"
-            disabled={!text.trim() || addComment.isPending}
-            onClick={() => addComment.mutate()}
-          >
-            {addComment.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          </Button>
-        </div>
-
-        <Dialog open={deletingId != null} onOpenChange={(o) => !o && setDeletingId(null)}>
-          <DialogContent className="max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Delete this comment?</DialogTitle>
-              <DialogDescription>This can't be undone.</DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="gap-2 sm:gap-2">
-              <Button variant="ghost" onClick={() => setDeletingId(null)} disabled={deleteComment.isPending}>Cancel</Button>
-              <Button
-                variant="destructive"
-                onClick={() => deletingId && deleteComment.mutate(deletingId)}
-                disabled={deleteComment.isPending}
-              >
-                {deleteComment.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </DialogContent>
-    </Dialog>
   );
 }
