@@ -84,21 +84,6 @@ function Home() {
     },
   });
 
-  const dailyCheckin = useMutation({
-    mutationFn: async () => {
-      if (!user) throw new Error("Not signed in");
-      return awardXp({ userId: user.id, kind: "daily_checkin" });
-    },
-    onSuccess: (res) => {
-      qc.invalidateQueries({ queryKey: ["profile"] });
-      toast.success(`+5 XP · ${res.newStreak}-day streak 🔥`);
-      if (res.leveledUp) setLevelUp(res.newLevel);
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const checkedInToday = profileQuery.data?.last_active_on === todayISO();
-  const streakDays = profileQuery.data?.streak_days ?? 0;
 
 
   const postsQuery = useQuery({
