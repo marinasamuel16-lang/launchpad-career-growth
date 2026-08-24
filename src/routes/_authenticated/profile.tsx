@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   Check, CheckCircle2, Circle, Award, Target, Sparkles, Briefcase, TrendingUp,
   Calendar, Edit3, Plus, Trash2, Loader2, LogOut, Flame, Wand2,
-  Settings, Mail, KeyRound, AlertTriangle, Lock,
+  Settings, Mail, KeyRound, AlertTriangle, Lock, Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -27,10 +27,12 @@ import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { CoachPaywall } from "@/components/CoachPaywall";
 import { supabase } from "@/integrations/supabase/client";
-import { awardXp, revokeXp, levelForXp, progressToNextLevel } from "@/lib/gamification";
+import { awardXp, revokeXp, levelForXp, progressToNextLevel, todayISO } from "@/lib/gamification";
 import { generateRoadmap } from "@/lib/ai-coach.functions";
 import { deleteAccount } from "@/lib/account.functions";
 import { cn } from "@/lib/utils";
+
+const SUBSTACK_URL = "https://launchpadeic.substack.com";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   component: Profile,
@@ -63,6 +65,7 @@ function Profile() {
   const [addStepOpen, setAddStepOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [levelUp, setLevelUp] = useState<number | null>(null);
+
   const [regenerating, setRegenerating] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const { isSubscribed } = useSubscription();
@@ -158,6 +161,19 @@ function Profile() {
     qc.invalidateQueries({ queryKey: ["profile"] });
     if (res.leveledUp) setLevelUp(res.newLevel);
   }
+
+  const dailyCheckin = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("Not signed in");
+      return awardXp({ userId: user.id, kind: "daily_checkin" });
+    },
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["profile"] });
+      toast.success(`+5 XP · ${res.newStreak}-day streak 🔥`);
+      if (res.leveledUp) setLevelUp(res.newLevel);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const saveProfile = useMutation({
     mutationFn: async (form: FormData) => {
@@ -387,6 +403,37 @@ function Profile() {
       </header>
 
       <main className="mx-auto max-w-2xl px-4 py-4 space-y-5">
+        {user && (() => {
+          const checkedInToday = profile?.last_active_on === todayISO();
+          return (
+            <button
+              type="button"
+              disabled={checkedInToday || dailyCheckin.isPending}
+              onClick={() => dailyCheckin.mutate()}
+              className={cn(
+                "w-full flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 transition-all text-left",
+                checkedInToday
+                  ? "bg-amber-500/10 border-amber-500/30"
+                  : "brand-gradient text-white border-transparent shadow-md shadow-primary/30 hover:scale-[1.01]",
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <Flame className={cn("h-5 w-5", checkedInToday ? "text-amber-600" : "text-white")} />
+                <div>
+                  <p className={cn("text-sm font-semibold", checkedInToday ? "text-amber-700 dark:text-amber-400" : "text-white")}>
+                    {checkedInToday ? `${streak}-day streak` : "Check in for today"}
+                  </p>
+                  <p className={cn("text-[11px]", checkedInToday ? "text-amber-700/70 dark:text-amber-400/70" : "text-white/80")}>
+                    {checkedInToday ? "Come back tomorrow to keep it going" : "+5 XP and grow your streak"}
+                  </p>
+                </div>
+              </div>
+              {!checkedInToday && (
+                <span className="text-xs font-semibold bg-white/20 rounded-full px-3 py-1">+5 XP</span>
+              )}
+            </button>
+          );
+        })()}
         <Card className="overflow-hidden shadow-sm">
           <div className="brand-gradient h-20" />
           <div className="px-5 pb-5 -mt-10">
@@ -579,6 +626,22 @@ function Profile() {
             {steps.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No weekly steps yet.</p>}
           </div>
         </Card>
+        <div className="grid gap-2 sm:grid-cols-2 pt-1">
+          <Link
+            to="/community"
+            className="flex items-center gap-2 rounded-xl border border-border/60 bg-card px-4 py-3 text-sm font-medium hover:bg-muted transition-colors"
+          >
+            <Users className="h-4 w-4 text-primary" /> Member board
+          </Link>
+          <a
+            href={SUBSTACK_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-2 rounded-xl border border-border/60 bg-card px-4 py-3 text-sm font-medium hover:bg-muted transition-colors"
+          >
+            <Mail className="h-4 w-4 text-primary" /> Newsletter on Substack
+          </a>
+        </div>
       </main>
 
       <LevelUpModal level={levelUp ?? 0} open={levelUp != null} onClose={() => setLevelUp(null)} />

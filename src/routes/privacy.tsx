@@ -152,7 +152,7 @@ function PrivacyPage() {
                 <strong>Payment processor</strong> — handles card details directly if you subscribe.
               </li>
               <li>
-                <strong>YouTube</strong> — the Conversations tab loads our public YouTube channel
+                <strong>YouTube</strong> — the Watch tab loads our public YouTube channel
                 feed and embeds videos; YouTube may set its own cookies when you play one.
               </li>
             </ul>
