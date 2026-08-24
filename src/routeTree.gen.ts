@@ -18,7 +18,7 @@ import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedMyPostsRouteImport } from './routes/_authenticated/my-posts'
-import { Route as AuthenticatedConversationsRouteImport } from './routes/_authenticated/conversations'
+import { Route as AuthenticatedCommunityRouteImport } from './routes/_authenticated/community'
 import { Route as AuthenticatedCoachRouteImport } from './routes/_authenticated/coach'
 import { Route as ApiPublicStripeWebhookRouteImport } from './routes/api/public/stripe-webhook'
 import { Route as AuthenticatedSubscriptionSuccessRouteImport } from './routes/_authenticated/subscription.success'
@@ -67,12 +67,11 @@ const AuthenticatedMyPostsRoute = AuthenticatedMyPostsRouteImport.update({
   path: '/my-posts',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedConversationsRoute =
-  AuthenticatedConversationsRouteImport.update({
-    id: '/conversations',
-    path: '/conversations',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
+const AuthenticatedCommunityRoute = AuthenticatedCommunityRouteImport.update({
+  id: '/community',
+  path: '/community',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedCoachRoute = AuthenticatedCoachRouteImport.update({
   id: '/coach',
   path: '/coach',
@@ -96,7 +95,7 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/coach': typeof AuthenticatedCoachRoute
-  '/conversations': typeof AuthenticatedConversationsRoute
+  '/community': typeof AuthenticatedCommunityRoute
   '/my-posts': typeof AuthenticatedMyPostsRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
@@ -109,7 +108,7 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/coach': typeof AuthenticatedCoachRoute
-  '/conversations': typeof AuthenticatedConversationsRoute
+  '/community': typeof AuthenticatedCommunityRoute
   '/my-posts': typeof AuthenticatedMyPostsRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
@@ -125,7 +124,7 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/_authenticated/coach': typeof AuthenticatedCoachRoute
-  '/_authenticated/conversations': typeof AuthenticatedConversationsRoute
+  '/_authenticated/community': typeof AuthenticatedCommunityRoute
   '/_authenticated/my-posts': typeof AuthenticatedMyPostsRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
@@ -142,7 +141,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/terms'
     | '/coach'
-    | '/conversations'
+    | '/community'
     | '/my-posts'
     | '/onboarding'
     | '/profile'
@@ -155,7 +154,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/terms'
     | '/coach'
-    | '/conversations'
+    | '/community'
     | '/my-posts'
     | '/onboarding'
     | '/profile'
@@ -170,7 +169,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/terms'
     | '/_authenticated/coach'
-    | '/_authenticated/conversations'
+    | '/_authenticated/community'
     | '/_authenticated/my-posts'
     | '/_authenticated/onboarding'
     | '/_authenticated/profile'
@@ -253,11 +252,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMyPostsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/conversations': {
-      id: '/_authenticated/conversations'
-      path: '/conversations'
-      fullPath: '/conversations'
-      preLoaderRoute: typeof AuthenticatedConversationsRouteImport
+    '/_authenticated/community': {
+      id: '/_authenticated/community'
+      path: '/community'
+      fullPath: '/community'
+      preLoaderRoute: typeof AuthenticatedCommunityRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/coach': {
@@ -286,7 +285,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteChildren {
   AuthenticatedCoachRoute: typeof AuthenticatedCoachRoute
-  AuthenticatedConversationsRoute: typeof AuthenticatedConversationsRoute
+  AuthenticatedCommunityRoute: typeof AuthenticatedCommunityRoute
   AuthenticatedMyPostsRoute: typeof AuthenticatedMyPostsRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
@@ -296,7 +295,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCoachRoute: AuthenticatedCoachRoute,
-  AuthenticatedConversationsRoute: AuthenticatedConversationsRoute,
+  AuthenticatedCommunityRoute: AuthenticatedCommunityRoute,
   AuthenticatedMyPostsRoute: AuthenticatedMyPostsRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,

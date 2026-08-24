@@ -10,11 +10,21 @@ import { getYoutubeVideos } from "@/lib/youtube.functions";
 
 const CHANNEL_URL = "https://youtube.com/@launchpadeic";
 
-export const Route = createFileRoute("/_authenticated/conversations")({
-  component: Conversations,
+export const Route = createFileRoute("/_authenticated/")({
+  component: Watch,
+  head: () => ({
+    meta: [
+      { title: "Watch — LaunchPad EIC Podcast Episodes" },
+      { name: "description", content: "Watch the latest LaunchPad EIC podcast episodes on careers, promotions, and growth." },
+      { property: "og:title", content: "Watch — LaunchPad EIC Podcast Episodes" },
+      { property: "og:description", content: "Watch the latest LaunchPad EIC podcast episodes on careers, promotions, and growth." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
 });
 
-function Conversations() {
+function Watch() {
   const fetchVideos = useServerFn(getYoutubeVideos);
   const videosQuery = useQuery({
     queryKey: ["youtube-videos"],
@@ -31,8 +41,8 @@ function Conversations() {
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
           <div>
-            <h1 className="text-lg font-bold tracking-tight">Career Conversations</h1>
-            <p className="text-xs text-muted-foreground">Latest from @launchpadeic</p>
+            <h1 className="text-lg font-bold tracking-tight">Watch</h1>
+            <p className="text-xs text-muted-foreground">Podcast episodes from @launchpadeic</p>
           </div>
           <Button size="sm" variant="outline" className="rounded-full gap-1.5" asChild>
             <a href={CHANNEL_URL} target="_blank" rel="noreferrer">
@@ -147,7 +157,7 @@ function Conversations() {
           <Youtube className="h-10 w-10 mx-auto mb-2" />
           <h3 className="font-bold text-lg">Subscribe to Launchpad EIC</h3>
           <p className="text-sm text-white/80 mt-1 mb-4">
-            New conversations every week. Real answers from people who've done it.
+            New episodes every week. Practical answers from people who've done it.
           </p>
           <Button variant="secondary" className="rounded-full gap-2 font-semibold" asChild>
             <a href={CHANNEL_URL} target="_blank" rel="noreferrer">
