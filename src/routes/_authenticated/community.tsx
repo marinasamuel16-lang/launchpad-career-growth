@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Heart, MessageCircle, Repeat2, Share2, Sparkles, TrendingUp, Clock, LogOut, Loader2, Send, Users, UserPlus, UserCheck, Flame, MoreHorizontal, Pencil, Trash2, X, Check, Mail } from "lucide-react";
+import { Heart, MessageCircle, Repeat2, Share2, Sparkles, TrendingUp, Clock, LogOut, Loader2, Send, Users, UserPlus, UserCheck, Flame, MoreHorizontal, Pencil, Trash2, X, Check } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNowStrict } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -21,7 +21,7 @@ import { LevelUpModal } from "@/components/LevelUpModal";
 import { useAuth } from "@/hooks/use-auth";
 import logo from "@/assets/logo.png";
 import { supabase } from "@/integrations/supabase/client";
-import { awardXp, todayISO } from "@/lib/gamification";
+
 import { cn } from "@/lib/utils";
 
 
@@ -313,7 +313,7 @@ function Home() {
           <div className="flex items-center gap-2">
             <img src={logo} alt="LaunchPad EIC" className="h-10 w-auto object-contain" />
             <h1 className="text-lg font-bold tracking-tight">
-              LaunchPad <span className="brand-gradient-text">EIC</span>
+              Member <span className="brand-gradient-text">Board</span>
             </h1>
           </div>
           <div className="flex items-center gap-1">
@@ -675,7 +675,7 @@ function CommentsDialog({ postId, onClose }: { postId: string | null; onClose: (
         <div className="flex-1 overflow-y-auto space-y-3 min-h-[120px]">
           {commentsQuery.isLoading && <div className="flex justify-center py-6"><Loader2 className="h-4 w-4 animate-spin text-primary" /></div>}
           {commentsQuery.data?.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-6">No comments yet. Start the conversation.</p>
+            <p className="text-sm text-muted-foreground text-center py-6">No replies yet. Add the first one.</p>
           )}
           {commentsQuery.data?.map((c) => {
             const mine = user?.id === c.user_id;
