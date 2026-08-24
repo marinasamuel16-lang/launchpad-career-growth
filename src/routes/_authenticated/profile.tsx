@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   Check, CheckCircle2, Circle, Award, Target, Sparkles, Briefcase, TrendingUp,
   Calendar, Edit3, Plus, Trash2, Loader2, LogOut, Flame, Wand2,
-  Settings, Mail, KeyRound, AlertTriangle, Lock, Users,
+  Settings, Mail, KeyRound, AlertTriangle, Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -386,12 +386,6 @@ function Profile() {
           <h1 className="text-lg font-bold tracking-tight">Your Career Roadmap</h1>
           <div className="flex items-center gap-1">
             <NotificationsBell />
-            <Link
-              to="/my-posts"
-              className="rounded-full px-3 py-1.5 text-xs font-medium border border-border/60 hover:bg-muted transition-colors"
-            >
-              My posts
-            </Link>
             <Button variant="outline" size="sm" className="rounded-full gap-1.5" onClick={() => setEditProfile(true)}>
               <Edit3 className="h-3.5 w-3.5" /> Edit
             </Button>
@@ -626,20 +620,14 @@ function Profile() {
             {steps.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No weekly steps yet.</p>}
           </div>
         </Card>
-        <div className="grid gap-2 sm:grid-cols-2 pt-1">
-          <Link
-            to="/community"
-            className="flex items-center gap-2 rounded-xl border border-border/60 bg-card px-4 py-3 text-sm font-medium hover:bg-muted transition-colors"
-          >
-            <Users className="h-4 w-4 text-primary" /> Member board
-          </Link>
+        <div className="pt-1">
           <a
             href={SUBSTACK_URL}
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-2 rounded-xl border border-border/60 bg-card px-4 py-3 text-sm font-medium hover:bg-muted transition-colors"
           >
-            <Mail className="h-4 w-4 text-primary" /> Newsletter on Substack
+            <Mail className="h-4 w-4 text-primary" /> Join the community on Substack
           </a>
         </div>
       </main>

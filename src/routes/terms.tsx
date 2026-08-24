@@ -39,8 +39,8 @@ function TermsPage() {
             <h2 className="text-lg font-semibold">1. The short version</h2>
             <p>
               LaunchPad EIC is a career growth app for people roughly 1–10 years into their
-              careers. You get an AI Coach, a career roadmap, a community feed, and video
-              conversations. It's a tool to help you think — it is not a professional advisor, and
+              careers. You get an AI Coach, a career roadmap, and video episodes. Our community lives on
+              Substack. It's a tool to help you think — it is not a professional advisor, and
               it can't promise you a job, a raise, or a promotion. By creating an account or using
               the app, you agree to these terms.
             </p>
