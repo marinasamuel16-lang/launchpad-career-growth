@@ -10,7 +10,7 @@ import { getYoutubeVideos } from "@/lib/youtube.functions";
 
 const CHANNEL_URL = "https://youtube.com/@launchpadeic";
 
-export const Route = createFileRoute("/_authenticated/")({
+export const Route = createFileRoute("/_authenticated/watch")({
   component: Watch,
   head: () => ({
     meta: [
