@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as AuthenticatedWatchRouteImport } from './routes/_authenticated/watch'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedCoachRouteImport } from './routes/_authenticated/coach'
@@ -49,6 +50,11 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/callback',
   path: '/callback',
   getParentRoute: () => AuthRoute,
+} as any)
+const AuthenticatedWatchRoute = AuthenticatedWatchRouteImport.update({
+  id: '/watch',
+  path: '/watch',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   id: '/profile',
@@ -85,6 +91,7 @@ export interface FileRoutesByFullPath {
   '/coach': typeof AuthenticatedCoachRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/watch': typeof AuthenticatedWatchRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/subscription/success': typeof AuthenticatedSubscriptionSuccessRoute
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
@@ -96,6 +103,7 @@ export interface FileRoutesByTo {
   '/coach': typeof AuthenticatedCoachRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/watch': typeof AuthenticatedWatchRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/': typeof AuthenticatedIndexRoute
   '/subscription/success': typeof AuthenticatedSubscriptionSuccessRoute
@@ -110,6 +118,7 @@ export interface FileRoutesById {
   '/_authenticated/coach': typeof AuthenticatedCoachRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/watch': typeof AuthenticatedWatchRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/subscription/success': typeof AuthenticatedSubscriptionSuccessRoute
@@ -125,6 +134,7 @@ export interface FileRouteTypes {
     | '/coach'
     | '/onboarding'
     | '/profile'
+    | '/watch'
     | '/auth/callback'
     | '/subscription/success'
     | '/api/public/stripe-webhook'
@@ -136,6 +146,7 @@ export interface FileRouteTypes {
     | '/coach'
     | '/onboarding'
     | '/profile'
+    | '/watch'
     | '/auth/callback'
     | '/'
     | '/subscription/success'
@@ -149,6 +160,7 @@ export interface FileRouteTypes {
     | '/_authenticated/coach'
     | '/_authenticated/onboarding'
     | '/_authenticated/profile'
+    | '/_authenticated/watch'
     | '/auth/callback'
     | '/_authenticated/'
     | '/_authenticated/subscription/success'
@@ -207,6 +219,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_authenticated/watch': {
+      id: '/_authenticated/watch'
+      path: '/watch'
+      fullPath: '/watch'
+      preLoaderRoute: typeof AuthenticatedWatchRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/profile': {
       id: '/_authenticated/profile'
       path: '/profile'
@@ -249,6 +268,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedCoachRoute: typeof AuthenticatedCoachRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedWatchRoute: typeof AuthenticatedWatchRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedSubscriptionSuccessRoute: typeof AuthenticatedSubscriptionSuccessRoute
 }
@@ -257,6 +277,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCoachRoute: AuthenticatedCoachRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedWatchRoute: AuthenticatedWatchRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedSubscriptionSuccessRoute: AuthenticatedSubscriptionSuccessRoute,
 }

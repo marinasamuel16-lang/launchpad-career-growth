@@ -3,7 +3,7 @@ import { Play, Sparkles, Map } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
-  { to: "/", label: "Watch", icon: Play },
+  { to: "/watch", label: "Watch", icon: Play },
   { to: "/coach", label: "Ask", icon: Sparkles },
   { to: "/profile", label: "Roadmap", icon: Map },
 ] as const;
