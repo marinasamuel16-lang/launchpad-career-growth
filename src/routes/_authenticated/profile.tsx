@@ -625,6 +625,7 @@ function Profile() {
             {steps.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No weekly steps yet.</p>}
           </div>
         </Card>
+                <ActionsHistory />
         <div className="pt-1">
           <a
             href={SUBSTACK_URL}
