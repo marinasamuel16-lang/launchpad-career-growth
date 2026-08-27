@@ -401,7 +401,6 @@ function Profile() {
 
       <main className="mx-auto max-w-2xl px-4 py-4 space-y-5">
                 <AdminThemesLink />
-        <ActionsOfTheWeek onLevelUp={(lvl) => setLevelUp(lvl)} />
         <Card className="overflow-hidden shadow-sm">
           <div className="brand-gradient h-20" />
           <div className="px-5 pb-5 -mt-10">
@@ -456,7 +455,7 @@ function Profile() {
             </div>
           </div>
         </Card>
-
+        <ActionsOfTheWeek onLevelUp={(lvl) => setLevelUp(lvl)} />
         <div className="grid gap-3 sm:grid-cols-3">
           <Card className="p-3 shadow-sm">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1"><Briefcase className="h-3.5 w-3.5" /> Where you are</div>
