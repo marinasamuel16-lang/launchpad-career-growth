@@ -400,6 +400,8 @@ function Profile() {
       </header>
 
       <main className="mx-auto max-w-2xl px-4 py-4 space-y-5">
+                <AdminThemesLink />
+        <ActionsOfTheWeek onLevelUp={(lvl) => setLevelUp(lvl)} />
         {user && (() => {
           const checkedInToday = profile?.last_active_on === todayISO();
           return (
