@@ -35,27 +35,28 @@ export function progressToNextLevel(xp: number): { current: number; next: number
   return { current, next, pct, level };
 }
 
-/**
- * Award XP to the current user. Delegates to the server so the client cannot
- * insert arbitrary xp_events rows.
- */
 export async function awardXp(opts: {
   userId: string;
   kind: XpKind;
   referenceId?: string;
 }): Promise<{ leveledUp: boolean; newLevel: number; newXp: number; streakIncreased: boolean; newStreak: number }> {
-  return await awardXpFn({ data: { kind: opts.kind, referenceId: opts.referenceId } });
+  try {
+    return await awardXpFn({ data: { kind: opts.kind, referenceId: opts.referenceId } });
+  } catch (e) {
+    console.warn("[xp] award skipped:", e);
+    return { leveledUp: false, newLevel: 1, newXp: 0, streakIncreased: false, newStreak: 0 };
+  }
 }
 
-/**
- * Revoke previously-awarded XP. Server-side only.
- */
 export async function revokeXp(opts: {
   userId: string;
   kind: XpKind;
   referenceId: string;
 }): Promise<{ leveledDown: boolean; newLevel: number; newXp: number }> {
-  return await revokeXpFn({ data: { kind: opts.kind, referenceId: opts.referenceId } });
+  try {
+    return await revokeXpFn({ data: { kind: opts.kind, referenceId: opts.referenceId } });
+  } catch (e) {
+    console.warn("[xp] revoke skipped:", e);
+    return { leveledDown: false, newLevel: 1, newXp: 0 };
+  }
 }
-
-
