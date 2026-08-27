@@ -1,24 +1,21 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Award, Quote } from "lucide-react";
+import { Award } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { usePublishedThemes, useMyCompletions } from "@/hooks/use-weekly-actions";
+import { usePublishedThemes } from "@/hooks/use-weekly-actions";
+import { useActionsDone } from "@/lib/actions-done";
 import { sbw, type WeeklyAction } from "@/integrations/supabase/weekly-types";
 
-/**
- * Completed weekly actions, grouped by theme, shown as earned milestones
- * inside the roadmap rather than a separate log.
- */
 export function ActionsHistory() {
   const themesQuery = usePublishedThemes();
-  const completionsQuery = useMyCompletions();
+  const { doneIds } = useActionsDone();
 
   const actionsQuery = useQuery({
     queryKey: ["weekly_actions_all_full"],
     staleTime: 120_000,
     queryFn: async () => {
       const { data, error } = await sbw.from("weekly_actions").select("*");
-      if (error) throw error;
+      if (error) return [] as WeeklyAction[];
       return (data ?? []) as WeeklyAction[];
     },
   });
@@ -26,30 +23,15 @@ export function ActionsHistory() {
   const groups = useMemo(() => {
     const themes = themesQuery.data ?? [];
     const actions = actionsQuery.data ?? [];
-    const completions = completionsQuery.data ?? [];
-    if (!completions.length) return [];
-
-    const byId = new Map(actions.map((a) => [a.id, a]));
-    const reflectionOf = new Map(completions.map((c) => [c.action_id, c.reflection]));
-    const dateOf = new Map(completions.map((c) => [c.action_id, c.completed_at]));
+    if (doneIds.length === 0) return [];
 
     return themes
-      .map((t) => {
-        const mine = completions
-          .map((c) => byId.get(c.action_id))
-          .filter((a): a is WeeklyAction => !!a && a.theme_id === t.id);
-        return { theme: t, actions: mine };
-      })
-      .filter((g) => g.actions.length > 0)
-      .map((g) => ({
-        ...g,
-        actions: g.actions.map((a) => ({
-          ...a,
-          reflection: reflectionOf.get(a.id) ?? null,
-          completedAt: dateOf.get(a.id) ?? null,
-        })),
-      }));
-  }, [themesQuery.data, actionsQuery.data, completionsQuery.data]);
+      .map((t) => ({
+        theme: t,
+        actions: actions.filter((a) => a.theme_id === t.id && doneIds.includes(a.id)),
+      }))
+      .filter((g) => g.actions.length > 0);
+  }, [themesQuery.data, actionsQuery.data, doneIds]);
 
   if (groups.length === 0) return null;
 
@@ -76,30 +58,11 @@ export function ActionsHistory() {
             </p>
             <div className="mt-1.5 space-y-2">
               {actions.map((a) => (
-                <div key={a.id} className="rounded-xl bg-muted/40 p-3">
-                  <div className="flex items-start gap-2">
-                    <div className="brand-gradient mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full">
-                      <Award className="h-3 w-3 text-white" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium leading-snug">{a.title}</p>
-                      {a.completedAt && (
-                        <p className="mt-0.5 text-[11px] text-muted-foreground">
-                          {new Date(a.completedAt).toLocaleDateString(undefined, {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
-                        </p>
-                      )}
-                      {a.reflection && (
-                        <p className="mt-1.5 flex gap-1.5 text-xs italic text-muted-foreground">
-                          <Quote className="mt-0.5 h-3 w-3 shrink-0" />
-                          {a.reflection}
-                        </p>
-                      )}
-                    </div>
+                <div key={a.id} className="flex items-start gap-2 rounded-xl bg-muted/40 p-3">
+                  <div className="brand-gradient mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full">
+                    <Award className="h-3 w-3 text-white" />
                   </div>
+                  <p className="text-sm font-medium leading-snug">{a.title}</p>
                 </div>
               ))}
             </div>
