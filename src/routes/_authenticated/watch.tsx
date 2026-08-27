@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { BottomNav } from "@/components/BottomNav";
+import { ActionsStrip } from "@/components/ActionsStrip";
 import { getYoutubeVideos } from "@/lib/youtube.functions";
 
 const CHANNEL_URL = "https://youtube.com/@launchpadeic";
@@ -51,7 +52,7 @@ function Watch() {
           </Button>
         </div>
       </header>
-
+      <ActionsStrip />
       <main className="mx-auto max-w-2xl px-4 py-4 space-y-5">
         {videosQuery.isLoading && (
           <div className="flex justify-center py-8">
