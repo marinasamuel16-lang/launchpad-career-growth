@@ -122,7 +122,7 @@ function Coach() {
           )}
         </div>
       </header>
-
+      <ActionsStrip />
       <main ref={scrollRef} className="mx-auto w-full max-w-2xl px-4 py-4 space-y-3">
 
         {messages.length === 0 && (
