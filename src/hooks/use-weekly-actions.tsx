@@ -8,6 +8,30 @@ import {
   type UserActionCompletion,
 } from "@/integrations/supabase/weekly-types";
 
+/**
+ * Is the signed-in user an admin?
+ * Read straight from user_roles — the "read own roles" policy scopes this to
+ * the current user, so it cannot be used to discover anyone else's role.
+ */
+export function useIsAdmin() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["is_admin", user?.id],
+    enabled: !!user,
+    staleTime: 300_000,
+    queryFn: async () => {
+      const { data, error } = await sbw
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user!.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      if (error) return false;
+      return !!data;
+    },
+  });
+}
+
 /** The theme that is currently live. Not date-based — driven by is_active. */
 export function useActiveTheme() {
   return useQuery({

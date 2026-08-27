@@ -21,7 +21,8 @@ import {
   sbw, DIFFICULTY_CLASS, DIFFICULTY_LABEL,
   type Difficulty, type WeeklyTheme, type WeeklyAction,
 } from "@/integrations/supabase/weekly-types";
-import { isAdminFn, draftThemeFn } from "@/lib/weekly-actions.functions";
+import { useIsAdmin } from "@/hooks/use-weekly-actions";
+import { draftThemeFn } from "@/lib/weekly-actions.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/themes")({
   component: AdminThemes,
@@ -60,17 +61,14 @@ function AdminThemes() {
   const nav = useNavigate();
   const qc = useQueryClient();
 
-  const adminQuery = useQuery({
-    queryKey: ["is_admin"],
-    queryFn: async () => isAdminFn(),
-  });
+  const adminQuery = useIsAdmin();
 
   useEffect(() => {
-    if (adminQuery.data && !adminQuery.data.isAdmin) {
+    if (adminQuery.isFetched && adminQuery.data === false) {
       toast.error("Admins only.");
       nav({ to: "/profile", replace: true });
     }
-  }, [adminQuery.data, nav]);
+  }, [adminQuery.isFetched, adminQuery.data, nav]);
 
   const [form, setForm] = useState(blankForm);
   const [adviceInput, setAdviceInput] = useState("");
@@ -310,7 +308,7 @@ function AdminThemes() {
       </div>
     );
   }
-  if (!adminQuery.data?.isAdmin) return null;
+  if (!adminQuery.data) return null;
 
   /* -------------------- render -------------------- */
 

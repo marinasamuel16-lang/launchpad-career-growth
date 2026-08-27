@@ -10,15 +10,30 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { awardXp, revokeXp, XP_REWARDS, type XpKind } from "@/lib/gamification";
 import {
   useActiveTheme, useMyCompletions, useCompletionCounts, useThemeStreak,
 } from "@/hooks/use-weekly-actions";
-import { toggleActionFn, saveReflectionFn } from "@/lib/weekly-actions.functions";
 import {
-  DIFFICULTY_CLASS, DIFFICULTY_LABEL, type WeeklyAction,
+  sbw, DIFFICULTY_CLASS, DIFFICULTY_LABEL,
+  type Difficulty, type WeeklyAction,
 } from "@/integrations/supabase/weekly-types";
 
 const YOUTUBE_URL = "https://youtube.com/@LaunchPadEIC";
+
+/**
+ * Difficulty decides the XP, routed through the app's existing award system
+ * so the browser can never mint XP of its own choosing.
+ */
+const XP_KIND_FOR: Record<Difficulty, XpKind> = {
+  easy: "task",        // 10
+  medium: "step",      // 25
+  stretch: "milestone" // 100
+};
+
+export function xpFor(a: { difficulty: Difficulty }): number {
+  return XP_REWARDS[XP_KIND_FOR[a.difficulty]];
+}
 
 export function ActionsOfTheWeek({
   onLevelUp,
@@ -47,10 +62,36 @@ export function ActionsOfTheWeek({
     mutationFn: async (a: WeeklyAction) => {
       if (!user) throw new Error("Not signed in");
       const complete = !completedIds.has(a.id);
-      const res = await toggleActionFn({ data: { actionId: a.id, complete } });
-      return { res, complete, action: a };
+      const kind = XP_KIND_FOR[a.difficulty];
+
+      if (complete) {
+        // Row-level security limits this to the signed-in user's own rows.
+        const { error } = await sbw
+          .from("user_action_completions")
+          .insert({ user_id: user.id, action_id: a.id });
+
+        // 23505 = already completed. Treat as success, don't double-award.
+        if (error && (error as { code?: string }).code !== "23505") {
+          throw new Error(error.message);
+        }
+        if (error) return { complete, action: a, res: null, already: true };
+
+        const res = await awardXp({ userId: user.id, kind, referenceId: a.id });
+        return { complete, action: a, res, already: false };
+      }
+
+      const { error } = await sbw
+        .from("user_action_completions")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("action_id", a.id);
+      if (error) throw new Error(error.message);
+
+      await revokeXp({ userId: user.id, kind, referenceId: a.id });
+      return { complete, action: a, res: null, already: false };
     },
-    // Optimistic — the check should land instantly, not after a round trip.
+
+    // Optimistic — the check lands instantly rather than after a round trip.
     onMutate: async (a: WeeklyAction) => {
       await qc.cancelQueries({ queryKey: ["my_action_completions", user?.id] });
       const prev = qc.getQueryData<any[]>(["my_action_completions", user?.id]);
@@ -59,24 +100,33 @@ export function ActionsOfTheWeek({
         const list = old ?? [];
         return isDone
           ? list.filter((c) => c.action_id !== a.id)
-          : [...list, { id: `tmp-${a.id}`, user_id: user?.id, action_id: a.id, completed_at: new Date().toISOString(), reflection: null }];
+          : [...list, {
+              id: `tmp-${a.id}`,
+              user_id: user?.id,
+              action_id: a.id,
+              completed_at: new Date().toISOString(),
+              reflection: null,
+            }];
       });
       if (!isDone) setJustDone(a.id);
       return { prev };
     },
+
     onError: (e: Error, _a, ctx) => {
       if (ctx?.prev) qc.setQueryData(["my_action_completions", user?.id], ctx.prev);
       setJustDone(null);
-      toast.error(e.message);
+      toast.error(e.message || "Could not save that — try again.");
     },
-    onSuccess: ({ res, complete, action }) => {
-      if (complete && !res.alreadyDone) {
-        toast.success(`+${(res as any).xpAwarded ?? action.xp_reward} XP · nice work`);
+
+    onSuccess: ({ complete, action, res, already }) => {
+      if (complete && !already) {
+        toast.success(`+${xpFor(action)} XP · nice work`);
         setReflectFor(action.id);
         setReflectText("");
       }
-      if (res.leveledUp) onLevelUp?.(res.newLevel);
+      if (res?.leveledUp) onLevelUp?.(res.newLevel);
     },
+
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["my_action_completions", user?.id] });
       qc.invalidateQueries({ queryKey: ["profile"] });
@@ -86,8 +136,15 @@ export function ActionsOfTheWeek({
   });
 
   const saveReflection = useMutation({
-    mutationFn: async (actionId: string) =>
-      saveReflectionFn({ data: { actionId, reflection: reflectText.trim() } }),
+    mutationFn: async (actionId: string) => {
+      if (!user) throw new Error("Not signed in");
+      const { error } = await sbw
+        .from("user_action_completions")
+        .update({ reflection: reflectText.trim() || null })
+        .eq("user_id", user.id)
+        .eq("action_id", actionId);
+      if (error) throw new Error(error.message);
+    },
     onSuccess: () => {
       setReflectFor(null);
       setReflectText("");
@@ -241,7 +298,7 @@ export function ActionsOfTheWeek({
                         {DIFFICULTY_LABEL[a.difficulty]}
                       </span>
                       <span className="inline-flex items-center gap-0.5 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                        <Sparkles className="h-2.5 w-2.5" /> +{a.xp_reward} XP
+                        <Sparkles className="h-2.5 w-2.5" /> +{xpFor(a)} XP
                       </span>
                       {count > 5 && (
                         <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">

@@ -1,17 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Settings2 } from "lucide-react";
-import { isAdminFn } from "@/lib/weekly-actions.functions";
+import { useIsAdmin } from "@/hooks/use-weekly-actions";
 
 /** Renders nothing unless the signed-in user is an admin. */
 export function AdminThemesLink() {
-  const { data } = useQuery({
-    queryKey: ["is_admin"],
-    queryFn: async () => isAdminFn(),
-    staleTime: 300_000,
-  });
+  const { data: isAdmin } = useIsAdmin();
 
-  if (!data?.isAdmin) return null;
+  if (!isAdmin) return null;
 
   return (
     <Link
