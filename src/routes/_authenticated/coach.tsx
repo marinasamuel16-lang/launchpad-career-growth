@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { BottomNav } from "@/components/BottomNav";
+import { ActionsStrip } from "@/components/ActionsStrip";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { CoachPaywall } from "@/components/CoachPaywall";
