@@ -1,46 +1,22 @@
-import { useEffect, useState } from "react";
 import { Check, CheckCircle2, Loader2, PlayCircle, Target, Youtube } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { useActiveTheme } from "@/hooks/use-weekly-actions";
+import { useActionsDone } from "@/lib/actions-done";
 
 const YOUTUBE_URL = "https://youtube.com/@LaunchPadEIC";
-const LOCAL_KEY = "lp_actions_done";
 
-function readDone(): string[] {
-  try {
-    const raw = localStorage.getItem(LOCAL_KEY);
-    return raw ? (JSON.parse(raw) as string[]) : [];
-  } catch {
-    return [];
-  }
+function openUrl(url: string) {
+  window.open(url, "_blank", "noopener,noreferrer");
 }
 
 export function ActionsOfTheWeek(_props: { onLevelUp?: (level: number) => void } = {}) {
   const themeQuery = useActiveTheme();
-  const [done, setDoneList] = useState<string[]>([]);
-
-  useEffect(() => {
-    setDoneList(readDone());
-  }, []);
+  const { isDone, setDone } = useActionsDone();
 
   const theme = themeQuery.data?.theme;
   const actions = themeQuery.data?.actions ?? [];
-
-  const isDone = (id: string) => done.includes(id);
-
-  const setDone = (id: string, value: boolean) => {
-    const next = value
-      ? Array.from(new Set([...done, id]))
-      : done.filter((x) => x !== id);
-    setDoneList(next);
-    try {
-      localStorage.setItem(LOCAL_KEY, JSON.stringify(next));
-    } catch {
-      /* storage unavailable — the tick still holds for this session */
-    }
-  };
 
   if (themeQuery.isLoading) {
     return (
@@ -59,14 +35,13 @@ export function ActionsOfTheWeek(_props: { onLevelUp?: (level: number) => void }
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold">New actions drop with the next episode.</p>
-            
-              href={YOUTUBE_URL}
-              target="_blank"
-              rel="noreferrer"
+            <button
+              type="button"
+              onClick={() => openUrl(YOUTUBE_URL)}
               className="mt-1 inline-flex items-center gap-1 text-xs text-primary hover:underline"
             >
               <Youtube className="h-3.5 w-3.5" /> Subscribe so you don't miss it
-            </a>
+            </button>
           </div>
         </div>
       </Card>
@@ -111,14 +86,13 @@ export function ActionsOfTheWeek(_props: { onLevelUp?: (level: number) => void }
         )}
 
         {theme.episode_url && (
-          
-            href={theme.episode_url}
-            target="_blank"
-            rel="noreferrer"
+          <button
+            type="button"
+            onClick={() => openUrl(theme.episode_url as string)}
             className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-white hover:underline"
           >
-            <PlayCircle className="h-4 w-4" /> Watch the episode →
-          </a>
+            <PlayCircle className="h-4 w-4" /> Watch the episode
+          </button>
         )}
       </div>
 
