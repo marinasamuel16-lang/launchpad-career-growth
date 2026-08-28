@@ -4,6 +4,23 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const PREMIUM_PRICE_ID = "price_1U6zCCH7RcKImftJindWuHT8";
 
 /**
+ * Stripe moved the billing period fields from the subscription object onto the
+ * subscription's items in newer API versions. Look in both places, and never
+ * try to build a Date out of a missing value.
+ */
+type SubLike = {
+  current_period_end?: number;
+  items?: { data: Array<{ current_period_end?: number }> };
+};
+
+function periodEndISO(sub: SubLike | null | undefined) {
+  const ts = sub?.current_period_end ?? sub?.items?.data?.[0]?.current_period_end;
+  return typeof ts === "number" && Number.isFinite(ts)
+    ? new Date(ts * 1000).toISOString()
+    : null;
+}
+
+/**
  * Creates a Stripe Checkout session in subscription mode for LaunchPad Premium
  * and returns the hosted checkout URL. Runs server-side only so the secret key
  * is never exposed to the browser.
@@ -102,7 +119,7 @@ export const syncCheckoutSession = createServerFn({ method: "POST" })
       client_reference_id: string | null;
       payment_status: string;
       customer: string | null;
-      subscription: { id: string; status: string; current_period_end: number } | null;
+      subscription: ({ id: string; status: string } & SubLike) | null;
     };
 
     if (session.client_reference_id !== context.userId) {
@@ -119,7 +136,7 @@ export const syncCheckoutSession = createServerFn({ method: "POST" })
         status: sub?.status ?? (session.payment_status === "paid" ? "active" : "incomplete"),
         stripe_customer_id: session.customer,
         stripe_subscription_id: sub?.id ?? null,
-        current_period_end: sub ? new Date(sub.current_period_end * 1000).toISOString() : null,
+        current_period_end: periodEndISO(sub),
         updated_at: new Date().toISOString(),
       },
       { onConflict: "user_id" },
@@ -127,4 +144,53 @@ export const syncCheckoutSession = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     return { active };
+  });
+
+/**
+ * Opens Stripe's hosted Customer Portal so a subscriber can update their card,
+ * download receipts, or cancel. Requires the portal to be configured once in
+ * the Stripe Dashboard (Settings -> Billing -> Customer portal).
+ */
+export const createPortalSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { origin: string }) => {
+    if (!input?.origin || !/^https?:\/\//.test(input.origin)) {
+      throw new Error("Invalid origin");
+    }
+    return { origin: input.origin.replace(/\/$/, "") };
+  })
+  .handler(async ({ data, context }) => {
+    const secretKey = process.env["STRIPE_SECRET_KEY"];
+    if (!secretKey) throw new Error("Stripe is not configured yet.");
+
+    const { data: row } = await context.supabase
+      .from("subscriptions")
+      .select("stripe_customer_id")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+
+    if (!row?.stripe_customer_id) {
+      throw new Error("No billing account found for this profile yet.");
+    }
+
+    const res = await fetch("https://api.stripe.com/v1/billing_portal/sessions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${secretKey}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        customer: row.stripe_customer_id,
+        return_url: `${data.origin}/profile`,
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      console.error(`[stripe] portal session failed [${res.status}]: ${text}`);
+      throw new Error("Could not open billing settings. Please try again.");
+    }
+
+    const session = (await res.json()) as { url: string };
+    return { url: session.url };
   });
