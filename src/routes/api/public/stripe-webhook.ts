@@ -27,6 +27,19 @@ function verifySignature(payload: string, header: string, secret: string) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+/**
+ * Stripe moved the billing period fields from the subscription object onto the
+ * subscription's items in newer API versions. Look in both places, and never
+ * try to build a Date out of a missing value.
+ */
+function periodEndISO(obj: Record<string, unknown>) {
+  const items = obj["items"] as { data?: Array<Record<string, unknown>> } | undefined;
+  const raw = obj["current_period_end"] ?? items?.data?.[0]?.["current_period_end"];
+  return typeof raw === "number" && Number.isFinite(raw)
+    ? new Date(raw * 1000).toISOString()
+    : null;
+}
+
 export const Route = createFileRoute("/api/public/stripe-webhook")({
   server: {
     handlers: {
@@ -98,6 +111,7 @@ export const Route = createFileRoute("/api/public/stripe-webhook")({
             break;
           }
 
+          case "customer.subscription.created":
           case "customer.subscription.updated": {
             const sub = event.data.object as Record<string, unknown>;
             const userId = await resolveUserId(sub);
@@ -105,14 +119,12 @@ export const Route = createFileRoute("/api/public/stripe-webhook")({
               console.error(`[stripe-webhook] unmatched subscription ${String(sub["id"])}`);
               break;
             }
-            const periodEnd = sub["current_period_end"];
             await upsert({
               user_id: userId,
               status: String(sub["status"]),
               stripe_customer_id: (sub["customer"] as string | null) ?? null,
               stripe_subscription_id: String(sub["id"]),
-              current_period_end:
-                typeof periodEnd === "number" ? new Date(periodEnd * 1000).toISOString() : null,
+              current_period_end: periodEndISO(sub),
             });
             console.log(`[stripe-webhook] subscription ${String(sub["status"])} for user ${userId}`);
             break;
