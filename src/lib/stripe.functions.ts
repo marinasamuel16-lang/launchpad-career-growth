@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-export const PREMIUM_PRICE_ID = "price_1U6xRyHcl96clMiRHxTcqxYF";
+export const PREMIUM_PRICE_ID = "price_1U6zCCH7RcKImftJindWuHT8";
 
 /**
  * Creates a Stripe Checkout session in subscription mode for LaunchPad Premium
