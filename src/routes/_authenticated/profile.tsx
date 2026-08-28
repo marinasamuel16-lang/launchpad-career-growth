@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   Check, CheckCircle2, Circle, Award, Target, Sparkles, Briefcase, TrendingUp,
   Calendar, Edit3, Plus, Trash2, Loader2, LogOut, Flame, Wand2,
-  Settings, Mail, KeyRound, AlertTriangle, Lock,
+  Settings, Mail, KeyRound, AlertTriangle, Lock, CreditCard,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -33,6 +33,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { awardXp, revokeXp, levelForXp, progressToNextLevel, todayISO } from "@/lib/gamification";
 import { generateRoadmap } from "@/lib/ai-coach.functions";
 import { deleteAccount } from "@/lib/account.functions";
+import { createPortalSession } from "@/lib/stripe.functions";
 import { cn } from "@/lib/utils";
 
 const SUBSTACK_URL = "https://launchpadeic.substack.com";
@@ -80,8 +81,10 @@ function Profile() {
   const [newPassword, setNewPassword] = useState("");
   const [savingEmail, setSavingEmail] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
+  const [openingPortal, setOpeningPortal] = useState(false);
   const generateFn = useServerFn(generateRoadmap);
   const deleteAccountFn = useServerFn(deleteAccount);
+  const portalFn = useServerFn(createPortalSession);
 
   const profileQuery = useQuery({
     queryKey: ["profile", user?.id],
@@ -365,6 +368,17 @@ function Profile() {
       toast.error(e.message ?? "Failed");
     } finally {
       setRegenerating(false);
+    }
+  };
+
+  const openBillingPortal = async () => {
+    setOpeningPortal(true);
+    try {
+      const { url } = await portalFn({ data: { origin: window.location.origin } });
+      window.location.href = url;
+    } catch (e: any) {
+      setOpeningPortal(false);
+      toast.error(e?.message ?? "Could not open billing settings.");
     }
   };
 
@@ -737,6 +751,17 @@ function Profile() {
             </div>
 
             <div className="border-t border-border/60 pt-4 space-y-2">
+              {isSubscribed && (
+                <Button
+                  variant="outline"
+                  className="w-full rounded-full gap-2"
+                  disabled={openingPortal}
+                  onClick={openBillingPortal}
+                >
+                  {openingPortal ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                  Manage billing
+                </Button>
+              )}
               <Button
                 variant="outline"
                 className="w-full rounded-full gap-2"
