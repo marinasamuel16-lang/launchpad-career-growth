@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -379,6 +379,59 @@ export type Database = {
         }
         Relationships: []
       }
+      user_action_completions: {
+        Row: {
+          action_id: string
+          completed_at: string
+          id: string
+          reflection: string | null
+          user_id: string
+        }
+        Insert: {
+          action_id: string
+          completed_at?: string
+          id?: string
+          reflection?: string | null
+          user_id: string
+        }
+        Update: {
+          action_id?: string
+          completed_at?: string
+          id?: string
+          reflection?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_action_completions_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "weekly_actions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       videos: {
         Row: {
           created_at: string
@@ -421,6 +474,89 @@ export type Database = {
         }
         Relationships: []
       }
+      weekly_actions: {
+        Row: {
+          description: string | null
+          difficulty: string
+          id: string
+          sort_order: number
+          theme_id: string
+          title: string
+          xp_reward: number
+        }
+        Insert: {
+          description?: string | null
+          difficulty?: string
+          id?: string
+          sort_order?: number
+          theme_id: string
+          title: string
+          xp_reward?: number
+        }
+        Update: {
+          description?: string | null
+          difficulty?: string
+          id?: string
+          sort_order?: number
+          theme_id?: string
+          title?: string
+          xp_reward?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_actions_theme_id_fkey"
+            columns: ["theme_id"]
+            isOneToOne: false
+            referencedRelation: "weekly_themes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      weekly_themes: {
+        Row: {
+          accent_color: string | null
+          created_at: string
+          episode_number: number | null
+          episode_url: string | null
+          guest_name: string | null
+          id: string
+          is_active: boolean
+          key_advice: string[]
+          published_at: string | null
+          subtitle: string | null
+          summary: string
+          title: string
+        }
+        Insert: {
+          accent_color?: string | null
+          created_at?: string
+          episode_number?: number | null
+          episode_url?: string | null
+          guest_name?: string | null
+          id?: string
+          is_active?: boolean
+          key_advice?: string[]
+          published_at?: string | null
+          subtitle?: string | null
+          summary?: string
+          title: string
+        }
+        Update: {
+          accent_color?: string | null
+          created_at?: string
+          episode_number?: number | null
+          episode_url?: string | null
+          guest_name?: string | null
+          id?: string
+          is_active?: boolean
+          key_advice?: string[]
+          published_at?: string | null
+          subtitle?: string | null
+          summary?: string
+          title?: string
+        }
+        Relationships: []
+      }
       xp_events: {
         Row: {
           amount: number
@@ -453,10 +589,33 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      action_completion_counts: {
+        Args: { p_theme_id: string }
+        Returns: {
+          action_id: string
+          completions: number
+        }[]
+      }
+      admin_theme_stats: {
+        Args: never
+        Returns: {
+          completions: number
+          participants: number
+          theme_id: string
+        }[]
+      }
+      broadcast_active_theme: { Args: never; Returns: number }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      publish_theme: { Args: { p_theme_id: string }; Returns: undefined }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -472,12 +631,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -501,11 +660,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -526,11 +685,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -551,11 +710,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -568,11 +727,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -583,6 +742,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const

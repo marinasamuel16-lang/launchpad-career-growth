@@ -21,6 +21,7 @@ import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authentic
 import { Route as AuthenticatedCoachRouteImport } from './routes/_authenticated/coach'
 import { Route as ApiPublicStripeWebhookRouteImport } from './routes/api/public/stripe-webhook'
 import { Route as AuthenticatedSubscriptionSuccessRouteImport } from './routes/_authenticated/subscription.success'
+import { Route as AuthenticatedAdminThemesRouteImport } from './routes/_authenticated/admin.themes'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -82,6 +83,12 @@ const AuthenticatedSubscriptionSuccessRoute =
     path: '/subscription/success',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAdminThemesRoute =
+  AuthenticatedAdminThemesRouteImport.update({
+    id: '/admin/themes',
+    path: '/admin/themes',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -93,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AuthenticatedProfileRoute
   '/watch': typeof AuthenticatedWatchRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/admin/themes': typeof AuthenticatedAdminThemesRoute
   '/subscription/success': typeof AuthenticatedSubscriptionSuccessRoute
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
 }
@@ -106,6 +114,7 @@ export interface FileRoutesByTo {
   '/watch': typeof AuthenticatedWatchRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/': typeof AuthenticatedIndexRoute
+  '/admin/themes': typeof AuthenticatedAdminThemesRoute
   '/subscription/success': typeof AuthenticatedSubscriptionSuccessRoute
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
 }
@@ -121,6 +130,7 @@ export interface FileRoutesById {
   '/_authenticated/watch': typeof AuthenticatedWatchRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/admin/themes': typeof AuthenticatedAdminThemesRoute
   '/_authenticated/subscription/success': typeof AuthenticatedSubscriptionSuccessRoute
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
 }
@@ -136,6 +146,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/watch'
     | '/auth/callback'
+    | '/admin/themes'
     | '/subscription/success'
     | '/api/public/stripe-webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -149,6 +160,7 @@ export interface FileRouteTypes {
     | '/watch'
     | '/auth/callback'
     | '/'
+    | '/admin/themes'
     | '/subscription/success'
     | '/api/public/stripe-webhook'
   id:
@@ -163,6 +175,7 @@ export interface FileRouteTypes {
     | '/_authenticated/watch'
     | '/auth/callback'
     | '/_authenticated/'
+    | '/_authenticated/admin/themes'
     | '/_authenticated/subscription/success'
     | '/api/public/stripe-webhook'
   fileRoutesById: FileRoutesById
@@ -261,6 +274,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSubscriptionSuccessRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/admin/themes': {
+      id: '/_authenticated/admin/themes'
+      path: '/admin/themes'
+      fullPath: '/admin/themes'
+      preLoaderRoute: typeof AuthenticatedAdminThemesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
@@ -270,6 +290,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedWatchRoute: typeof AuthenticatedWatchRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedAdminThemesRoute: typeof AuthenticatedAdminThemesRoute
   AuthenticatedSubscriptionSuccessRoute: typeof AuthenticatedSubscriptionSuccessRoute
 }
 
@@ -279,6 +300,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedWatchRoute: AuthenticatedWatchRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedAdminThemesRoute: AuthenticatedAdminThemesRoute,
   AuthenticatedSubscriptionSuccessRoute: AuthenticatedSubscriptionSuccessRoute,
 }
 
