@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Bell, Heart, MessageCircle, UserPlus, Award } from "lucide-react";
+import { Bell, Heart, MessageCircle, UserPlus, Award, Target } from "lucide-react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 type Notif = {
   id: string;
-  type: "like" | "comment" | "follow" | "milestone_earned";
+  type: "like" | "comment" | "follow" | "milestone_earned" | "weekly_action";
   actor_id: string | null;
   post_id: string | null;
   data: any;
@@ -23,6 +23,7 @@ const ICONS = {
   comment: { icon: MessageCircle, color: "text-blue-500" },
   follow: { icon: UserPlus, color: "text-emerald-500" },
   milestone_earned: { icon: Award, color: "text-amber-500" },
+  weekly_action: { icon: Target, color: "text-violet-500" },
 } as const;
 
 function describe(n: Notif): string {
@@ -32,6 +33,7 @@ function describe(n: Notif): string {
     case "comment": return `${who} commented: ${n.data?.preview ?? ""}`;
     case "follow": return `${who} followed you`;
     case "milestone_earned": return `🏆 You earned: ${n.data?.title ?? "a milestone"}`;
+    case "weekly_action": return `New Action of the Week — ${n.data?.title ?? "it's live"}: ${n.data?.action ?? "open Home to start it."}`;
   }
 }
 
@@ -99,7 +101,7 @@ export function NotificationsBell() {
             <p className="text-sm text-muted-foreground text-center py-12">No notifications yet.</p>
           )}
           {notifs.map((n) => {
-            const meta = ICONS[n.type];
+            const meta = ICONS[n.type] ?? { icon: Bell, color: "text-muted-foreground" };
             const Icon = meta.icon;
             return (
               <div
