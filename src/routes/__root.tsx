@@ -87,8 +87,27 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:description", content: "Watch career episodes, get AI coaching, and track your career roadmap." },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/dK2qtLlfhhcl7HUF5rFKPRfzjMA3/social-images/social-1781128925651-Screenshot_2026-06-09_at_9.29.52_PM.webp" },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/dK2qtLlfhhcl7HUF5rFKPRfzjMA3/social-images/social-1781128925651-Screenshot_2026-06-09_at_9.29.52_PM.webp" },
+      // Home screen / PWA
+      { name: "theme-color", content: "#4A1A91" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
+      { name: "apple-mobile-web-app-title", content: "LaunchPad" },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      // Browser tab icon
+      { rel: "icon", href: "/favicon.ico?v=2", sizes: "any" },
+      { rel: "icon", type: "image/png", sizes: "32x32", href: "/icons/icon-32.png?v=2" },
+      { rel: "icon", type: "image/png", sizes: "16x16", href: "/icons/icon-16.png?v=2" },
+      // iOS home screen icon
+      { rel: "apple-touch-icon", sizes: "180x180", href: "/icons/icon-180.png?v=2" },
+      { rel: "apple-touch-icon", sizes: "167x167", href: "/icons/icon-167.png?v=2" },
+      { rel: "apple-touch-icon", sizes: "152x152", href: "/icons/icon-152.png?v=2" },
+      { rel: "apple-touch-icon", sizes: "120x120", href: "/icons/icon-120.png?v=2" },
+      // Android / Chrome install
+      { rel: "manifest", href: "/manifest.json?v=2" },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,
