@@ -44,6 +44,87 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_usage: {
+        Row: {
+          created_at: string
+          feature: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          feature: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          feature?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      career_journey: {
+        Row: {
+          category: string | null
+          completed_at: string
+          created_at: string
+          description: string | null
+          id: string
+          milestone_id: string | null
+          personalized: boolean
+          ref_id: string
+          source: string
+          theme_id: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          completed_at?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          milestone_id?: string | null
+          personalized?: boolean
+          ref_id: string
+          source: string
+          theme_id?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          completed_at?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          milestone_id?: string | null
+          personalized?: boolean
+          ref_id?: string
+          source?: string
+          theme_id?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "career_journey_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "milestones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_journey_theme_id_fkey"
+            columns: ["theme_id"]
+            isOneToOne: false
+            referencedRelation: "weekly_themes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_messages: {
         Row: {
           content: string
@@ -158,6 +239,7 @@ export type Database = {
       }
       milestones: {
         Row: {
+          archived: boolean
           created_at: string
           description: string | null
           id: string
@@ -167,6 +249,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          archived?: boolean
           created_at?: string
           description?: string | null
           id?: string
@@ -176,6 +259,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          archived?: boolean
           created_at?: string
           description?: string | null
           id?: string
@@ -218,6 +302,57 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      personalized_actions: {
+        Row: {
+          action_text: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          milestone_id: string | null
+          theme_id: string | null
+          user_id: string
+          week_start: string
+          why_text: string | null
+        }
+        Insert: {
+          action_text: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          milestone_id?: string | null
+          theme_id?: string | null
+          user_id: string
+          week_start: string
+          why_text?: string | null
+        }
+        Update: {
+          action_text?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          milestone_id?: string | null
+          theme_id?: string | null
+          user_id?: string
+          week_start?: string
+          why_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personalized_actions_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "milestones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personalized_actions_theme_id_fkey"
+            columns: ["theme_id"]
+            isOneToOne: false
+            referencedRelation: "weekly_themes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       post_likes: {
         Row: {
