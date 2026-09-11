@@ -4,10 +4,11 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -122,6 +123,13 @@ function RootShell({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
+        {/* WCAG 2.4.1 Bypass Blocks — first thing in the tab order, visible on focus. */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground focus:shadow-lg"
+        >
+          Skip to main content
+        </a>
         {children}
         <Scripts />
       </body>
@@ -142,6 +150,27 @@ function AuthCacheBridge() {
   return null;
 }
 
+/**
+ * WCAG 4.1.3 Status Messages. A client-side router swaps the page without a
+ * document load, so a screen reader is never told the page changed. Announce
+ * the new title politely after it has settled.
+ */
+function RouteAnnouncer() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => setMessage(document.title), 120);
+    return () => clearTimeout(timer);
+  }, [pathname]);
+
+  return (
+    <div aria-live="polite" aria-atomic="true" className="sr-only">
+      {message}
+    </div>
+  );
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
@@ -149,7 +178,11 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <AuthCacheBridge />
-        <Outlet />
+        <RouteAnnouncer />
+        {/* WCAG 1.3.1 — the app had no landmark of any kind before this. */}
+        <main id="main-content" tabIndex={-1}>
+          <Outlet />
+        </main>
         <Toaster position="top-center" richColors />
       </AuthProvider>
     </QueryClientProvider>

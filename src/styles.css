@@ -77,10 +77,14 @@
   --muted-foreground: oklch(0.5 0.06 300);
   --accent: oklch(0.92 0.07 300);
   --accent-foreground: oklch(0.35 0.2 300);
-  --destructive: oklch(0.6 0.24 27);
+  /* WCAG 1.4.3: white label on destructive was 4.31:1, needed 4.5:1. Now 5.27:1. */
+  --destructive: oklch(0.55 0.22 27);
   --destructive-foreground: oklch(0.99 0.005 300);
-  --border: oklch(0.9 0.04 300);
-  --input: oklch(0.9 0.04 300);
+  /* --border is decorative (card edges, separators) and not governed by 1.4.11. */
+  --border: oklch(0.88 0.04 300);
+  /* --input IS a control boundary. Was 1.27:1 vs bg / 1.36:1 vs card, needed 3:1.
+     0.64 is the lightest value clearing 3:1 on both: 3.12:1 and 3.33:1. */
+  --input: oklch(0.64 0.04 300);
   --ring: oklch(0.55 0.24 300);
   --chart-1: oklch(0.55 0.24 300);
   --chart-2: oklch(0.6 0.22 320);
@@ -115,7 +119,8 @@
   --destructive: oklch(0.7 0.19 22);
   --destructive-foreground: oklch(0.98 0.01 300);
   --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
+  /* 3.39:1 vs dark bg, 3.03:1 vs dark card. */
+  --input: oklch(0.51 0.03 300);
   --ring: oklch(0.7 0.22 300);
   --chart-1: oklch(0.65 0.24 300);
   --chart-2: oklch(0.7 0.22 320);
@@ -163,6 +168,40 @@
 
   /* Fixed bottom bars manage their own safe-area padding in-component
      to avoid double-padding (BottomNav already offsets the home indicator). */
+
+  /* WCAG 2.4.7 Focus Visible. shadcn defaults are inconsistent across the
+     custom .brand-gradient buttons, so make the indicator explicit and global. */
+  :where(a, button, input, select, textarea, summary, [role="button"], [tabindex]:not([tabindex="-1"])):focus-visible {
+    outline: 3px solid var(--color-ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Visually hidden, but reachable by screen readers and by keyboard focus.
+     Used by the skip link and the route announcer in __root.tsx. */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  /* WCAG 2.3.3 Animation from Interactions. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
 
