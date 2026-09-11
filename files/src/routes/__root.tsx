@@ -1,0 +1,190 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  Outlet,
+  Link,
+  createRootRouteWithContext,
+  useRouter,
+  useRouterState,
+  HeadContent,
+  Scripts,
+} from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { Toaster } from "@/components/ui/sonner";
+import { AuthProvider } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
+
+import appCss from "../styles.css?url";
+
+function NotFoundComponent() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="max-w-md text-center">
+        <h1 className="text-7xl font-bold text-foreground">404</h1>
+        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          The page you're looking for doesn't exist or has been moved.
+        </p>
+        <div className="mt-6">
+          <Link
+            to="/"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Go home
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+  console.error(error);
+  const router = useRouter();
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="max-w-md text-center">
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+          This page didn't load
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Something went wrong on our end. You can try refreshing or head back home.
+        </p>
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          <button
+            onClick={() => {
+              router.invalidate();
+              reset();
+            }}
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Try again
+          </button>
+          <a
+            href="/"
+            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+          >
+            Go home
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  head: () => ({
+    meta: [
+      { charSet: "utf-8" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { title: "LaunchPad EIC — Career growth for early-career professionals" },
+      { name: "description", content: "Watch career episodes, get AI coaching, and track your career roadmap." },
+      { name: "author", content: "LaunchPad EIC" },
+      { property: "og:title", content: "LaunchPad EIC — Career growth for early-career professionals" },
+      { property: "og:description", content: "Watch career episodes, get AI coaching, and track your career roadmap." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "twitter:title", content: "LaunchPad EIC — Career growth for early-career professionals" },
+      { name: "twitter:description", content: "Watch career episodes, get AI coaching, and track your career roadmap." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/dK2qtLlfhhcl7HUF5rFKPRfzjMA3/social-images/social-1781128925651-Screenshot_2026-06-09_at_9.29.52_PM.webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/dK2qtLlfhhcl7HUF5rFKPRfzjMA3/social-images/social-1781128925651-Screenshot_2026-06-09_at_9.29.52_PM.webp" },
+      // Home screen / PWA
+      { name: "theme-color", content: "#4A1A91" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
+      { name: "apple-mobile-web-app-title", content: "LaunchPad" },
+    ],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      // Browser tab icon
+      { rel: "icon", href: "/favicon.ico?v=2", sizes: "any" },
+      { rel: "icon", type: "image/png", sizes: "32x32", href: "/icons/icon-32.png?v=2" },
+      { rel: "icon", type: "image/png", sizes: "16x16", href: "/icons/icon-16.png?v=2" },
+      // iOS home screen icon
+      { rel: "apple-touch-icon", sizes: "180x180", href: "/icons/icon-180.png?v=2" },
+      { rel: "apple-touch-icon", sizes: "167x167", href: "/icons/icon-167.png?v=2" },
+      { rel: "apple-touch-icon", sizes: "152x152", href: "/icons/icon-152.png?v=2" },
+      { rel: "apple-touch-icon", sizes: "120x120", href: "/icons/icon-120.png?v=2" },
+      // Android / Chrome install
+      { rel: "manifest", href: "/manifest.json?v=2" },
+    ],
+  }),
+  shellComponent: RootShell,
+  component: RootComponent,
+  notFoundComponent: NotFoundComponent,
+  errorComponent: ErrorComponent,
+});
+
+function RootShell({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <head>
+        <HeadContent />
+      </head>
+      <body>
+        {/* WCAG 2.4.1 Bypass Blocks — first thing in the tab order, visible on focus. */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground focus:shadow-lg"
+        >
+          Skip to main content
+        </a>
+        {children}
+        <Scripts />
+      </body>
+    </html>
+  );
+}
+
+function AuthCacheBridge() {
+  const router = useRouter();
+  const { queryClient } = Route.useRouteContext();
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      router.invalidate();
+      queryClient.invalidateQueries();
+    });
+    return () => subscription.unsubscribe();
+  }, [router, queryClient]);
+  return null;
+}
+
+/**
+ * WCAG 4.1.3 Status Messages. A client-side router swaps the page without a
+ * document load, so a screen reader is never told the page changed. Announce
+ * the new title politely after it has settled.
+ */
+function RouteAnnouncer() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => setMessage(document.title), 120);
+    return () => clearTimeout(timer);
+  }, [pathname]);
+
+  return (
+    <div aria-live="polite" aria-atomic="true" className="sr-only">
+      {message}
+    </div>
+  );
+}
+
+function RootComponent() {
+  const { queryClient } = Route.useRouteContext();
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <AuthCacheBridge />
+        <RouteAnnouncer />
+        {/* WCAG 1.3.1 — the app had no landmark of any kind before this. */}
+        <main id="main-content" tabIndex={-1}>
+          <Outlet />
+        </main>
+        <Toaster position="top-center" richColors />
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+}
