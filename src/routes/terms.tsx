@@ -23,13 +23,11 @@ export const Route = createFileRoute("/terms")({
   component: TermsPage,
 });
 
-// TODO before this is the published agreement: replace these placeholders, and
-// register a DMCA agent with the US Copyright Office at dmca.copyright.gov —
-// the 17 U.S.C. § 512 safe harbour does not exist until you do, and this app
-// hosts user-generated content.
+// TODO before this is the published agreement: fill in [MAILING ADDRESS].
+// Note: the app no longer hosts user-generated content (the community feed was
+// removed), so no DMCA designated agent is required.
 const ENTITY = "Marina Samuel, a sole proprietor doing business as LaunchPad EIC";
 const ENTITY_ADDRESS = "[MAILING ADDRESS]";
-const DMCA_AGENT = "Marina Samuel";
 const VENUE_COUNTY = "Essex";
 
 function TermsPage() {
@@ -100,57 +98,48 @@ function TermsPage() {
           </section>
 
           <section className="space-y-2">
-            <h2 className="text-lg font-semibold">4. Community content</h2>
+            <h2 className="text-lg font-semibold">4. What you create is yours</h2>
             <p>
-              Posts, comments, reposts, and profiles are created by individual users. Those views
-              are theirs, not LaunchPad EIC's, and we don't verify, endorse, or fact-check them.
-              Treat career advice from strangers on the internet accordingly.
+              Your roadmap, your milestones and tasks, your weekly action steps, and your
+              conversations with the AI Coach belong to you. They are private to your account — no
+              other user of LaunchPad EIC can see them. We store them so the app works and so your
+              history is there when you come back, and we delete them when you delete your account.
             </p>
             <p>
-              You keep ownership of what you post, and you grant us a non-exclusive, worldwide,
-              royalty-free licence to store, display, and distribute it within the Service so the
-              feed works. That licence ends when you delete the content, except for copies in
-              routine backups until they roll off.
+              We do not publish your content, show it to other users, or use it to train AI models.
             </p>
           </section>
 
           <section className="space-y-2">
             <h2 className="text-lg font-semibold">5. Acceptable use</h2>
             <p>
-              Don't post or do anything unlawful, harassing, hateful, threatening, sexually
-              explicit, defamatory, deliberately misleading, or that infringes someone else's
-              rights. Don't post confidential information belonging to your employer, your school,
-              or anyone else. Don't impersonate anyone. Don't scrape, reverse engineer, probe, or
-              overload the Service, or try to access accounts or data that aren't yours. Don't use
-              the Service to build a competing product.
+              Use the app for your own career development. Don't share your account with other
+              people, don't scrape, reverse engineer, probe, or overload the Service, don't try to
+              access accounts or data that aren't yours, and don't use the AI Coach to generate
+              unlawful, harassing, or deliberately deceptive material. Don't use the Service to
+              build a competing product.
             </p>
             <p>
-              <strong>Reporting.</strong> Posts, comments, and profiles can be reported. We review
-              reports and may remove content, warn, suspend, or terminate accounts. You can also
-              block another user, which hides their content from you. If you believe content breaks
-              the law, tell us at{" "}
+              If something in the app concerns you — an AI response that seems harmful, a bug that
+              exposes something it shouldn't — tell us at{" "}
               <a className="text-primary hover:underline" href="mailto:safety@launchpadeic.com">
                 safety@launchpadeic.com
-              </a>{" "}
-              and describe what and why.
+              </a>
+              .
             </p>
           </section>
 
           <section className="space-y-2">
-            <h2 className="text-lg font-semibold">6. Copyright — DMCA</h2>
+            <h2 className="text-lg font-semibold">6. Copyright</h2>
             <p>
-              If you believe content on the Service infringes your copyright, send a notice under 17
-              U.S.C. § 512(c)(3) to our designated agent: {DMCA_AGENT}, {ENTITY}, {ENTITY_ADDRESS},{" "}
-              <a className="text-primary hover:underline" href="mailto:dmca@launchpadeic.com">
-                dmca@launchpadeic.com
-              </a>
-              .
-            </p>
-            <p>
-              Include your signature, identification of the work, identification of the infringing
-              material and where it is, your contact details, a statement of good faith belief, and
-              a statement under penalty of perjury that the information is accurate and you are
-              authorised to act. We will respond, and we terminate repeat infringers' accounts.
+              LaunchPad EIC does not host content posted by users. The episodes, written material,
+              and app itself are ours or licensed to us. If you believe something in the Service
+              infringes your copyright, email{" "}
+              <a className="text-primary hover:underline" href="mailto:support@launchpadeic.com">
+                support@launchpadeic.com
+              </a>{" "}
+              with enough detail to identify the work and where it appears, and we will look into it
+              promptly.
             </p>
           </section>
 
@@ -332,10 +321,6 @@ function TermsPage() {
               . Safety and content reports:{" "}
               <a className="text-primary hover:underline" href="mailto:safety@launchpadeic.com">
                 safety@launchpadeic.com
-              </a>
-              . Copyright:{" "}
-              <a className="text-primary hover:underline" href="mailto:dmca@launchpadeic.com">
-                dmca@launchpadeic.com
               </a>
               . Privacy:{" "}
               <a className="text-primary hover:underline" href="mailto:privacy@launchpadeic.com">
