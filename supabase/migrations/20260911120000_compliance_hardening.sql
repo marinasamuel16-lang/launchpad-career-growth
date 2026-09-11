@@ -273,3 +273,28 @@ BEGIN
   RETURN NEW;
 END;
 $function$;
+
+-- ---------------------------------------------------------------------------
+-- 6. Lock profiles to their owner
+-- ---------------------------------------------------------------------------
+-- The old policy was `using (true)` for any authenticated user, which made
+-- sense when there was a community feed showing profiles to other members.
+-- The app is now single-player — Watch / Ask / Roadmap, with the feed removed —
+-- so every signed-in account being able to read every other account's name,
+-- role, industry, years of experience, career goal and LinkedIn URL is exposure
+-- with no purpose behind it.
+--
+-- Verified before applying: every profiles query in src/ filters on the caller's
+-- own id. The one exception, NotificationsBell, looks up actor names for
+-- like/follow/comment notifications, which can no longer be generated; legacy
+-- rows of those types were deleted, and the component already degrades to a
+-- null name rather than failing.
+
+drop policy if exists "Profiles viewable by authenticated" on public.profiles;
+drop policy if exists "Users view own profile" on public.profiles;
+create policy "Users view own profile"
+  on public.profiles for select to authenticated
+  using (auth.uid() = id);
+
+-- Clear notifications for features the product no longer has.
+delete from public.notifications where type in ('follow', 'like', 'comment');
