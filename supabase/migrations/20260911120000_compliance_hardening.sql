@@ -1,38 +1,50 @@
 -- ============================================================================
--- LaunchPad EIC — compliance hardening migration
+-- LaunchPad EIC — compliance hardening
 -- Prepared 2026-09-11 for higher-education procurement readiness.
 --
--- Apply as: supabase/migrations/20260911000000_compliance_hardening.sql
+-- IMPORTANT: this file is written to be SAFE TO RUN TWICE.
 --
--- What this does:
---   1. Adds content reporting + user blocking (required by any university
---      reviewing a user-generated-content platform).
---   2. Adds an immutable admin audit log.
---   3. Adds consent-record columns so you can prove, per user, which version
---      of the Terms and Privacy Policy they accepted and when.
---   4. Adds a privacy-request log (access / correction / deletion / appeal)
---      so NJDPA response deadlines are evidenced rather than asserted.
+-- Parts of it were already applied directly to the database on 11 Sep 2026
+-- (the four new tables, their policies, and the profiles columns). Without the
+-- guards below, re-running would fail on the first `create type` and abort the
+-- whole migration. Every statement here is now either `if not exists`, wrapped
+-- in a duplicate-swallowing block, or a `drop ... if exists` followed by a
+-- create — so running it on a fresh database and running it on the current one
+-- both end in the same place.
+--
+-- What it does:
+--   1. Content reporting + user blocking, with blocking enforced in the
+--      database rather than only in the interface.
+--   2. An append-only admin audit log.
+--   3. Consent columns on profiles, so you can prove which version of the
+--      Terms and Privacy Policy each user accepted.
+--   4. A privacy-request log, so NJDPA response deadlines are evidenced.
+--   5. Carries the consent values from signup through to the profile row.
 -- ============================================================================
 
 -- ---------------------------------------------------------------------------
--- 2. Content reporting and user blocking
+-- 1. Content reporting and user blocking
 -- ---------------------------------------------------------------------------
 
-create type public.report_reason as enum (
-  'harassment',
-  'hate_speech',
-  'sexual_content',
-  'violence_or_threats',
-  'self_harm',
-  'spam_or_scam',
-  'confidential_information',
-  'impersonation',
-  'other'
-);
+do $$ begin
+  create type public.report_reason as enum (
+    'harassment',
+    'hate_speech',
+    'sexual_content',
+    'violence_or_threats',
+    'self_harm',
+    'spam_or_scam',
+    'confidential_information',
+    'impersonation',
+    'other'
+  );
+exception when duplicate_object then null; end $$;
 
-create type public.report_status as enum ('open', 'actioned', 'dismissed');
+do $$ begin
+  create type public.report_status as enum ('open', 'actioned', 'dismissed');
+exception when duplicate_object then null; end $$;
 
-create table public.content_reports (
+create table if not exists public.content_reports (
   id             uuid primary key default gen_random_uuid(),
   reporter_id    uuid not null references auth.users(id) on delete cascade,
   post_id        uuid references public.posts(id)    on delete cascade,
@@ -45,31 +57,34 @@ create table public.content_reports (
   resolved_at    timestamptz,
   resolution_note text,
   created_at     timestamptz not null default now(),
-  -- exactly one target
+  -- a report points at exactly one thing
   constraint one_target check (
     (post_id is not null)::int + (comment_id is not null)::int + (reported_user is not null)::int = 1
   )
 );
 
-create index content_reports_status_idx  on public.content_reports (status, created_at desc);
-create index content_reports_reporter_idx on public.content_reports (reporter_id);
+create index if not exists content_reports_status_idx   on public.content_reports (status, created_at desc);
+create index if not exists content_reports_reporter_idx on public.content_reports (reporter_id);
 
 alter table public.content_reports enable row level security;
 
+drop policy if exists "users file own reports" on public.content_reports;
 create policy "users file own reports"
   on public.content_reports for insert to authenticated
   with check (auth.uid() = reporter_id);
 
+drop policy if exists "users read own reports" on public.content_reports;
 create policy "users read own reports"
   on public.content_reports for select to authenticated
   using (auth.uid() = reporter_id);
 
+drop policy if exists "admins manage reports" on public.content_reports;
 create policy "admins manage reports"
   on public.content_reports for all to authenticated
   using (public.has_role(auth.uid(), 'admin'::public.app_role))
   with check (public.has_role(auth.uid(), 'admin'::public.app_role));
 
-create table public.user_blocks (
+create table if not exists public.user_blocks (
   blocker_id uuid not null references auth.users(id) on delete cascade,
   blocked_id uuid not null references auth.users(id) on delete cascade,
   created_at timestamptz not null default now(),
@@ -79,13 +94,15 @@ create table public.user_blocks (
 
 alter table public.user_blocks enable row level security;
 
+drop policy if exists "users manage own blocks" on public.user_blocks;
 create policy "users manage own blocks"
   on public.user_blocks for all to authenticated
   using (auth.uid() = blocker_id)
   with check (auth.uid() = blocker_id);
 
--- Hide blocked users' content from the feed. Existing SELECT policies are
--- replaced so the block is enforced in the database, not just the UI.
+-- Enforce blocking in the database, not just the interface. With an empty
+-- user_blocks table these behave identically to the policies they replace —
+-- verified against live data before this file shipped.
 drop policy if exists "Posts viewable by authenticated" on public.posts;
 create policy "Posts viewable by authenticated"
   on public.posts for select to authenticated
@@ -107,13 +124,14 @@ create policy "Comments viewable by authenticated"
   );
 
 -- ---------------------------------------------------------------------------
--- 3. Admin audit log
+-- 2. Admin audit log
 -- ---------------------------------------------------------------------------
--- HECVAT 4 and every campus security review ask whether privileged actions are
--- logged and whether the log can be altered by the person who generated it.
--- Insert-only for admins, no update or delete policy at all.
+-- Every campus security review asks whether privileged actions are logged and
+-- whether the person who generated the log can alter it. There is deliberately
+-- no UPDATE and no DELETE policy here, so an administrator cannot edit or erase
+-- their own trail.
 
-create table public.admin_audit_log (
+create table if not exists public.admin_audit_log (
   id          uuid primary key default gen_random_uuid(),
   actor_id    uuid references auth.users(id) on delete set null,
   action      text not null,
@@ -123,26 +141,25 @@ create table public.admin_audit_log (
   created_at  timestamptz not null default now()
 );
 
-create index admin_audit_log_created_idx on public.admin_audit_log (created_at desc);
+create index if not exists admin_audit_log_created_idx on public.admin_audit_log (created_at desc);
 
 alter table public.admin_audit_log enable row level security;
 
+drop policy if exists "admins read audit log" on public.admin_audit_log;
 create policy "admins read audit log"
   on public.admin_audit_log for select to authenticated
   using (public.has_role(auth.uid(), 'admin'::public.app_role));
 
+drop policy if exists "admins append audit log" on public.admin_audit_log;
 create policy "admins append audit log"
   on public.admin_audit_log for insert to authenticated
   with check (public.has_role(auth.uid(), 'admin'::public.app_role) and auth.uid() = actor_id);
 
--- deliberately no UPDATE or DELETE policy: the log is append-only to
--- non-superusers, which is the property a reviewer is actually asking about.
-
 -- ---------------------------------------------------------------------------
--- 4. Consent records
+-- 3. Consent records
 -- ---------------------------------------------------------------------------
--- Today the signup checkbox gates the button but nothing is persisted, so there
--- is no way to prove what a given user agreed to. These columns fix that.
+-- The signup checkbox used to gate the button and then be discarded, so there
+-- was no way to prove what any user had agreed to.
 
 alter table public.profiles
   add column if not exists terms_version_accepted   text,
@@ -151,49 +168,56 @@ alter table public.profiles
   add column if not exists ai_disclaimer_ack_at     timestamptz;
 
 comment on column public.profiles.terms_version_accepted is
-  'Version string (e.g. "2026-09-11") of the Terms of Service the user accepted at signup or at re-consent.';
+  'Version string (e.g. "2026-09-11") of the Terms of Service the user accepted at signup or re-consent.';
 
 -- ---------------------------------------------------------------------------
--- 5. Privacy-request log
+-- 4. Privacy-request log
 -- ---------------------------------------------------------------------------
--- NJDPA gives consumers access / correction / deletion / portability rights,
--- a 45-day response clock, and a right to APPEAL a refusal. The appeal right is
--- the part most small vendors miss. Logging requests is how you evidence the
--- clock was met.
+-- NJDPA gives people access / correction / deletion / portability rights, a
+-- 45-day response clock, and a right to appeal a refusal. The appeal right is
+-- the part most small vendors miss. Logging requests is how the clock is
+-- evidenced rather than asserted.
 
-create type public.privacy_request_kind as enum (
-  'access', 'correction', 'deletion', 'portability', 'opt_out', 'appeal'
-);
+do $$ begin
+  create type public.privacy_request_kind as enum (
+    'access', 'correction', 'deletion', 'portability', 'opt_out', 'appeal'
+  );
+exception when duplicate_object then null; end $$;
 
-create type public.privacy_request_state as enum (
-  'received', 'in_progress', 'fulfilled', 'refused', 'appeal_upheld', 'appeal_denied'
-);
+do $$ begin
+  create type public.privacy_request_state as enum (
+    'received', 'in_progress', 'fulfilled', 'refused', 'appeal_upheld', 'appeal_denied'
+  );
+exception when duplicate_object then null; end $$;
 
-create table public.privacy_requests (
-  id           uuid primary key default gen_random_uuid(),
-  user_id      uuid references auth.users(id) on delete set null,
+create table if not exists public.privacy_requests (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid references auth.users(id) on delete set null,
   contact_email text not null,
-  kind         public.privacy_request_kind not null,
-  state        public.privacy_request_state not null default 'received',
-  detail       text,
-  received_at  timestamptz not null default now(),
-  due_at       timestamptz not null default (now() + interval '45 days'),
-  closed_at    timestamptz,
-  handler_note text
+  kind          public.privacy_request_kind not null,
+  state         public.privacy_request_state not null default 'received',
+  detail        text,
+  received_at   timestamptz not null default now(),
+  due_at        timestamptz not null default (now() + interval '45 days'),
+  closed_at     timestamptz,
+  handler_note  text
 );
 
-create index privacy_requests_due_idx on public.privacy_requests (state, due_at);
+create index if not exists privacy_requests_due_idx on public.privacy_requests (state, due_at);
 
 alter table public.privacy_requests enable row level security;
 
+drop policy if exists "users read own privacy requests" on public.privacy_requests;
 create policy "users read own privacy requests"
   on public.privacy_requests for select to authenticated
   using (auth.uid() = user_id);
 
+drop policy if exists "users file own privacy requests" on public.privacy_requests;
 create policy "users file own privacy requests"
   on public.privacy_requests for insert to authenticated
   with check (auth.uid() = user_id);
 
+drop policy if exists "admins manage privacy requests" on public.privacy_requests;
 create policy "admins manage privacy requests"
   on public.privacy_requests for all to authenticated
   using (public.has_role(auth.uid(), 'admin'::public.app_role))
@@ -203,9 +227,9 @@ create policy "admins manage privacy requests"
 -- 5. Carry consent metadata from signup into the profile
 -- ---------------------------------------------------------------------------
 -- The signup form now sends terms/privacy versions and timestamps in
--- raw_user_meta_data. Without this, they would sit in auth.users and never
--- reach the profiles columns added above. Body is otherwise unchanged from the
--- existing function — only the INSERT into public.profiles is extended.
+-- raw_user_meta_data. Without this they would sit in auth.users and never reach
+-- the profiles columns above. Body is otherwise unchanged from the existing
+-- function — only the INSERT into public.profiles is extended.
 
 create or replace function public.handle_new_user()
 returns trigger
