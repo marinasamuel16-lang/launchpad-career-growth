@@ -95,6 +95,118 @@ export type Database = {
         }
         Relationships: []
       }
+      career_actions: {
+        Row: {
+          action_text: string
+          category: string
+          completed_at: string | null
+          created_at: string
+          effort_minutes: number
+          goal_id: string | null
+          id: string
+          milestone_id: string | null
+          offered_on: string | null
+          skipped_at: string | null
+          source: string
+          status: string
+          theme_id: string | null
+          user_id: string
+          why_text: string | null
+        }
+        Insert: {
+          action_text: string
+          category: string
+          completed_at?: string | null
+          created_at?: string
+          effort_minutes?: number
+          goal_id?: string | null
+          id?: string
+          milestone_id?: string | null
+          offered_on?: string | null
+          skipped_at?: string | null
+          source?: string
+          status?: string
+          theme_id?: string | null
+          user_id: string
+          why_text?: string | null
+        }
+        Update: {
+          action_text?: string
+          category?: string
+          completed_at?: string | null
+          created_at?: string
+          effort_minutes?: number
+          goal_id?: string | null
+          id?: string
+          milestone_id?: string | null
+          offered_on?: string | null
+          skipped_at?: string | null
+          source?: string
+          status?: string
+          theme_id?: string | null
+          user_id?: string
+          why_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "career_actions_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "career_goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_actions_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "milestones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_actions_theme_id_fkey"
+            columns: ["theme_id"]
+            isOneToOne: false
+            referencedRelation: "weekly_themes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      career_goals: {
+        Row: {
+          blocker: string | null
+          created_at: string
+          focus_area: string | null
+          id: string
+          status: string
+          target_date: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          blocker?: string | null
+          created_at?: string
+          focus_area?: string | null
+          id?: string
+          status?: string
+          target_date?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          blocker?: string | null
+          created_at?: string
+          focus_area?: string | null
+          id?: string
+          status?: string
+          target_date?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       career_journey: {
         Row: {
           category: string | null
@@ -154,6 +266,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      career_memory_entries: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          impact: string | null
+          occurred_on: string
+          skill: string | null
+          source: string
+          source_ref: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          impact?: string | null
+          occurred_on?: string
+          skill?: string | null
+          source?: string
+          source_ref?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          impact?: string | null
+          occurred_on?: string
+          skill?: string | null
+          source?: string
+          source_ref?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       coach_messages: {
         Row: {
@@ -270,6 +427,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      daily_checkins: {
+        Row: {
+          checkin_on: string
+          created_at: string
+          id: string
+          mood: number
+          note: string | null
+          processed_at: string | null
+          user_id: string
+        }
+        Insert: {
+          checkin_on?: string
+          created_at?: string
+          id?: string
+          mood: number
+          note?: string | null
+          processed_at?: string | null
+          user_id: string
+        }
+        Update: {
+          checkin_on?: string
+          created_at?: string
+          id?: string
+          mood?: number
+          note?: string | null
+          processed_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       follows: {
         Row: {
@@ -899,6 +1086,10 @@ export type Database = {
         }[]
       }
       broadcast_active_theme: { Args: never; Returns: number }
+      finish_checkin_extraction: {
+        Args: { p_entries: Json; p_id: string; p_note: string; p_user: string }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -907,6 +1098,28 @@ export type Database = {
         Returns: boolean
       }
       publish_theme: { Args: { p_theme_id: string }; Returns: undefined }
+      save_daily_checkin: {
+        Args: { p_date: string; p_mood: number; p_note: string }
+        Returns: {
+          checkin_on: string
+          created_at: string
+          id: string
+          mood: number
+          note: string | null
+          processed_at: string | null
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "daily_checkins"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      verified_xp: {
+        Args: { p_kind: string; p_ref: string; p_revoke?: boolean }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
