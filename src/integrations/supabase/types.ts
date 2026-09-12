@@ -44,6 +44,36 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          id: string
+          metadata: Json
+          target_id: string | null
+          target_type: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Relationships: []
+      }
       ai_usage: {
         Row: {
           created_at: string
@@ -174,6 +204,66 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_reports: {
+        Row: {
+          comment_id: string | null
+          created_at: string
+          detail: string | null
+          id: string
+          post_id: string | null
+          reason: Database["public"]["Enums"]["report_reason"]
+          reported_user: string | null
+          reporter_id: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["report_status"]
+        }
+        Insert: {
+          comment_id?: string | null
+          created_at?: string
+          detail?: string | null
+          id?: string
+          post_id?: string | null
+          reason: Database["public"]["Enums"]["report_reason"]
+          reported_user?: string | null
+          reporter_id: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
+        }
+        Update: {
+          comment_id?: string | null
+          created_at?: string
+          detail?: string | null
+          id?: string
+          post_id?: string | null
+          reason?: Database["public"]["Enums"]["report_reason"]
+          reported_user?: string | null
+          reporter_id?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_reports_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_reports_post_id_fkey"
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "posts"
@@ -430,48 +520,99 @@ export type Database = {
         }
         Relationships: []
       }
+      privacy_requests: {
+        Row: {
+          closed_at: string | null
+          contact_email: string
+          detail: string | null
+          due_at: string
+          handler_note: string | null
+          id: string
+          kind: Database["public"]["Enums"]["privacy_request_kind"]
+          received_at: string
+          state: Database["public"]["Enums"]["privacy_request_state"]
+          user_id: string | null
+        }
+        Insert: {
+          closed_at?: string | null
+          contact_email: string
+          detail?: string | null
+          due_at?: string
+          handler_note?: string | null
+          id?: string
+          kind: Database["public"]["Enums"]["privacy_request_kind"]
+          received_at?: string
+          state?: Database["public"]["Enums"]["privacy_request_state"]
+          user_id?: string | null
+        }
+        Update: {
+          closed_at?: string | null
+          contact_email?: string
+          detail?: string | null
+          due_at?: string
+          handler_note?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["privacy_request_kind"]
+          received_at?: string
+          state?: Database["public"]["Enums"]["privacy_request_state"]
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
+          ai_disclaimer_ack_at: string | null
           avatar_url: string | null
           career_goal: string | null
+          consent_accepted_at: string | null
           created_at: string
           id: string
           industry: string | null
           last_active_on: string | null
           linkedin_url: string | null
           name: string | null
+          privacy_version_accepted: string | null
           role: string | null
           streak_days: number
+          terms_version_accepted: string | null
           updated_at: string
           xp: number
           years_experience: number | null
         }
         Insert: {
+          ai_disclaimer_ack_at?: string | null
           avatar_url?: string | null
           career_goal?: string | null
+          consent_accepted_at?: string | null
           created_at?: string
           id: string
           industry?: string | null
           last_active_on?: string | null
           linkedin_url?: string | null
           name?: string | null
+          privacy_version_accepted?: string | null
           role?: string | null
           streak_days?: number
+          terms_version_accepted?: string | null
           updated_at?: string
           xp?: number
           years_experience?: number | null
         }
         Update: {
+          ai_disclaimer_ack_at?: string | null
           avatar_url?: string | null
           career_goal?: string | null
+          consent_accepted_at?: string | null
           created_at?: string
           id?: string
           industry?: string | null
           last_active_on?: string | null
           linkedin_url?: string | null
           name?: string | null
+          privacy_version_accepted?: string | null
           role?: string | null
           streak_days?: number
+          terms_version_accepted?: string | null
           updated_at?: string
           xp?: number
           years_experience?: number | null
@@ -545,6 +686,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_blocks: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
@@ -751,6 +910,31 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      privacy_request_kind:
+        | "access"
+        | "correction"
+        | "deletion"
+        | "portability"
+        | "opt_out"
+        | "appeal"
+      privacy_request_state:
+        | "received"
+        | "in_progress"
+        | "fulfilled"
+        | "refused"
+        | "appeal_upheld"
+        | "appeal_denied"
+      report_reason:
+        | "harassment"
+        | "hate_speech"
+        | "sexual_content"
+        | "violence_or_threats"
+        | "self_harm"
+        | "spam_or_scam"
+        | "confidential_information"
+        | "impersonation"
+        | "other"
+      report_status: "open" | "actioned" | "dismissed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -879,6 +1063,34 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      privacy_request_kind: [
+        "access",
+        "correction",
+        "deletion",
+        "portability",
+        "opt_out",
+        "appeal",
+      ],
+      privacy_request_state: [
+        "received",
+        "in_progress",
+        "fulfilled",
+        "refused",
+        "appeal_upheld",
+        "appeal_denied",
+      ],
+      report_reason: [
+        "harassment",
+        "hate_speech",
+        "sexual_content",
+        "violence_or_threats",
+        "self_harm",
+        "spam_or_scam",
+        "confidential_information",
+        "impersonation",
+        "other",
+      ],
+      report_status: ["open", "actioned", "dismissed"],
     },
   },
 } as const
