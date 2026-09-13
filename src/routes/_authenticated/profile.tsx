@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { BottomNav } from "@/components/BottomNav";
 import { ActionsOfTheWeek } from "@/components/ActionsOfTheWeek";
 import { ActionsHistory } from "@/components/ActionsHistory";
+import { DailyCheckIn } from "@/components/DailyCheckIn";
 import { AdminThemesLink } from "@/components/AdminThemesLink";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { AvatarUpload, getAvatarSignedUrl } from "@/components/AvatarUpload";
