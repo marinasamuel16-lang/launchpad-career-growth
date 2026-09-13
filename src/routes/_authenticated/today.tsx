@@ -83,7 +83,13 @@ function Today() {
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["today"] });
       qc.invalidateQueries({ queryKey: ["career_memory"] });
-      if (!res.alreadyDone) toast.success("Logged. That's on your record now.");
+        if (!res.alreadyDone) {
+        toast.success(
+          res.recorded
+            ? "Logged. That's on your record now."
+            : "Marked complete — but it couldn't be added to your Career Memory.",
+        );
+      }
     },
     onError: (e: Error) => toast.error(e.message || "Couldn't mark that complete."),
   });
