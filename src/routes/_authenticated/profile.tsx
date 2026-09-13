@@ -459,17 +459,6 @@ function Profile() {
         </Card>
                 <ActionsOfTheWeek onLevelUp={(lvl) => setLevelUp(lvl)} />
 
-        <DailyCheckIn />
-
-        <Link
-          to="/career"
-          className="flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-card px-4 py-3 text-sm font-medium transition-colors hover:bg-muted"
-        >
-          <span className="flex items-center gap-2">
-            <BookMarked className="h-4 w-4 text-primary" aria-hidden="true" /> My Career
-          </span>
-          <span className="text-xs text-muted-foreground">Wins, projects, feedback →</span>
-        </Link>
         <div className="grid gap-3 sm:grid-cols-3">
           <Card className="p-3 shadow-sm">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1"><Briefcase className="h-3.5 w-3.5" /> Where you are</div>
