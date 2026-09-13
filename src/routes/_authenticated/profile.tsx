@@ -5,8 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   Check, CheckCircle2, Circle, Award, Target, Sparkles, Briefcase, TrendingUp,
   Calendar, Edit3, Plus, Trash2, Loader2, LogOut, Flame, Wand2,
-  Settings, Mail, KeyRound, AlertTriangle, Lock, CreditCard,
-} from "lucide-react";
+  Settings, Mail, KeyRound, AlertTriangle, Lock, CreditCard, BookMarked,} from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
