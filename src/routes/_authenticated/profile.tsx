@@ -168,18 +168,7 @@ function Profile() {
     if (res.leveledUp) setLevelUp(res.newLevel);
   }
 
-  const dailyCheckin = useMutation({
-    mutationFn: async () => {
-      if (!user) throw new Error("Not signed in");
-      return awardXp({ userId: user.id, kind: "daily_checkin" });
-    },
-    onSuccess: (res) => {
-      qc.invalidateQueries({ queryKey: ["profile"] });
-      toast.success(`+5 XP · ${res.newStreak}-day streak 🔥`);
-      if (res.leveledUp) setLevelUp(res.newLevel);
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
+
 
   const saveProfile = useMutation({
     mutationFn: async (form: FormData) => {
