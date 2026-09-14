@@ -23,6 +23,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { DailyCheckIn } from "@/components/DailyCheckIn";
 import { LogWinDialog } from "@/components/LogWinDialog";
+import { ActionsOfTheWeek } from "@/components/ActionsOfTheWeek";
 import { useAuth } from "@/hooks/use-auth";
 import {
   getTodayDashboard,
@@ -83,7 +84,8 @@ function Today() {
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["today"] });
       qc.invalidateQueries({ queryKey: ["career_memory"] });
-        if (!res.alreadyDone) {
+      qc.invalidateQueries({ queryKey: ["launchscore"] });
+      if (!res.alreadyDone) {
         toast.success(
           res.recorded
             ? "Logged. That's on your record now."
@@ -354,6 +356,18 @@ function Today() {
           <div className="mt-2">
             <DailyCheckIn />
           </div>
+        </section>
+
+        {/* ---- The podcast theme, last. Weekly cadence, so it sits below the
+               daily stuff rather than competing with it. ---- */}
+        <section aria-labelledby="weekly-theme-heading">
+          <h2
+            id="weekly-theme-heading"
+            className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+          >
+            From the podcast
+          </h2>
+          <ActionsOfTheWeek />
         </section>
       </main>
 
