@@ -14,6 +14,7 @@ create table if not exists public.guest_leads (
                 check (status in ('New', 'Contacted', 'Invited', 'Recorded', 'Not now')),
   format        text check (format in ('leader_drop', 'live')),
   invite_id     uuid references public.leader_drop_invites(id) on delete set null,
+  live_url      text,          -- the guest's page on launchpad-live-guests.netlify.app
   live_invited_at timestamptz,
   live_date     date,
   created_at    timestamptz not null default now(),

@@ -553,7 +553,7 @@ ${linkFor(inv)}
 
   // ---------- leads ----------
   const LEAD_STATES = ["New", "Contacted", "Invited", "Recorded", "Not now"];
-  const LEAD_FIELDS = ["name", "title", "company", "linkedin", "email", "source", "topic", "notes", "status", "live_date"];
+  const LEAD_FIELDS = ["name", "title", "company", "linkedin", "email", "source", "topic", "notes", "status", "live_url", "live_date"];
   function leadInvite(l) { return l.invite_id ? INVITES.find((i) => i.id === l.invite_id) : null; }
   // A Leader Drop lead counts as Recorded as soon as its invitation is submitted.
   function leadStatus(l) {
@@ -581,7 +581,8 @@ I’m Marina Samuel, an NJIT alum (Class of 2025) and the host of LaunchPad EIC,
 
 I’d love to have you on for a short conversation${l.topic ? ` about ${l.topic.replace(/[.\s]+$/, "")}` : ""}. Would you be open to being a guest?
 
-It’s very casual and only about 10 minutes long. I’ll send over a short document with the topic and a few questions beforehand.
+It’s very casual and only about 10 minutes long. ${l.live_url ? `Your page with the date and your three questions is here:
+${l.live_url}` : "I’ll send over a short document with the topic and a few questions beforehand."}
 
 Best,
 Marina Samuel`;
@@ -632,7 +633,7 @@ Marina Samuel`;
           ${rows.map((l) => {
             const st = leadStatus(l);
             const inv = leadInvite(l);
-            const fmt = l.format === "leader_drop" ? `<span class="fmt">Leader Drop</span>` : l.format === "live" ? `<span class="fmt">Live${l.live_date ? ` · ${fmtDate(l.live_date + "T12:00:00")}` : ""}</span>` : "";
+            const fmt = l.format === "leader_drop" ? `<span class="fmt">Leader Drop</span>` : l.format === "live" ? `<span class="fmt">Live${l.live_date ? ` · ${fmtDate(l.live_date + "T12:00:00")}` : ""}${l.live_url ? ` · <a href="${esc(l.live_url)}" target="_blank" rel="noopener">page</a>` : ""}</span>` : "";
             return `<tr data-lead="${l.id}" tabindex="0" aria-label="Edit ${esc(l.name)}">
               <td class="c-who"><b>${esc(l.name)}</b><span class="small" style="display:block">${esc([l.title, l.company].filter(Boolean).join(" · ") || "—")}</span>
                 ${l.source ? `<span class="small lead-src">${esc(l.source)}</span>` : ""}</td>
@@ -712,7 +713,8 @@ Marina Samuel`;
         <div class="field"><label for="lf-notes">Notes</label><textarea class="input qbox" id="lf-notes" rows="3" maxlength="2000">${esc(l.notes || "")}</textarea></div>
         <div class="create-grid2">
           <div class="field"><label for="lf-status">Status</label><select class="input" id="lf-status">${LEAD_STATES.map((s) => `<option ${s === l.status ? "selected" : ""}>${s}</option>`).join("")}</select></div>
-          ${l.format === "live" ? `<div class="field"><label for="lf-live_date">Live recording date</label><input class="input" id="lf-live_date" type="date" value="${esc(l.live_date || "")}"></div>` : ""}
+          ${l.format === "live" ? `<div class="field"><label for="lf-live_url">Live guest page link</label><input class="input" id="lf-live_url" maxlength="300" inputmode="url" autocapitalize="off" placeholder="launchpad-live-guests.netlify.app/g/…" value="${esc(l.live_url || "")}"></div>
+          <div class="field"><label for="lf-live_date">Live recording date</label><input class="input" id="lf-live_date" type="date" value="${esc(l.live_date || "")}"></div>` : ""}
         </div>
         <div class="field-err" id="lf-err" hidden></div>
         <div class="a-row">
@@ -732,7 +734,7 @@ Marina Samuel`;
         ${l.format === "live" || showLive ? `
           <p class="small" style="margin:14px 0 6px">Live interview invitation${l.live_invited_at ? ` · first copied ${fmtDateTime(l.live_invited_at)}` : ""}. Edit before sending if you like:</p>
           <textarea class="input qbox" id="liveMsg" rows="11">${esc(liveInviteText(l))}</textarea>
-          <div class="a-row"><button class="btn btn-ghost btn-sm" type="button" data-copylive>Copy this message</button></div>` : ""}
+          <div class="a-row"><button class="btn btn-ghost btn-sm" type="button" data-copylive>Copy this message</button>${l.live_url ? `<a class="btn btn-text btn-sm" href="${esc(l.live_url)}" target="_blank" rel="noopener">Open live page</a>` : ""}</div>` : ""}
       </div>`}`;
     document.body.append(bg, d);
     document.body.style.overflow = "hidden";
@@ -752,6 +754,7 @@ Marina Samuel`;
       if (!row.name) { d.querySelector("#lf-name").setAttribute("aria-invalid", "true"); d.querySelector("#lf-name").focus(); return; }
       row.status = row.status || "New";
       if (row.linkedin) row.linkedin = normLinkedin(row.linkedin);
+      if (row.live_url) row.live_url = normLinkedin(row.live_url);
       const btn = d.querySelector("#lf-go"); btn.disabled = true;
       if (isNew) {
         let made;
@@ -813,7 +816,7 @@ Marina Samuel`;
       { id: "lead-1", name: "Jordan Reyes", title: "Senior Data Analyst", company: "Hackensack Meridian Health", linkedin: "https://www.linkedin.com/in/jordan-reyes", source: "NJIT alum, BME ’17", topic: "moving from analyst to manager without an MBA", status: "New", format: null, invite_id: null, created_at: iso(0.5) },
       { id: "lead-2", name: "Tasha Greene", title: "Founder", company: "Greene Street Bakery", source: "Instagram follower", topic: "leaving a corporate job to start a small business", status: "Contacted", format: null, invite_id: null, created_at: iso(3) },
       { id: "lead-3", name: "Sam Patel", title: "Engineering Manager", company: "PSEG", source: "Referred by Richard Klein", topic: "your first year managing former peers", status: "Invited", format: "leader_drop", invite_id: "inv-6", created_at: iso(6) },
-      { id: "lead-4", name: "Elena Novak", title: "Product Marketing Lead", company: "Prudential", source: "LinkedIn post on career pivots", topic: "career pivots", status: "Invited", format: "live", live_invited_at: iso(4), live_date: new Date(now + 6 * day).toISOString().slice(0, 10), invite_id: null, created_at: iso(8) },
+      { id: "lead-4", name: "Elena Novak", title: "Product Marketing Lead", company: "Prudential", source: "LinkedIn post on career pivots", topic: "career pivots", status: "Invited", format: "live", live_url: "https://launchpad-live-guests.netlify.app/g/demo", live_invited_at: iso(4), live_date: new Date(now + 6 * day).toISOString().slice(0, 10), invite_id: null, created_at: iso(8) },
     ];
     NOMS = [{ id: "n1", from_leader_id: "demo-1", nominee_name: "Rachel Kim", nominee_contact: "https://www.linkedin.com/in/rachel-kim", created_at: new Date(now - 0.2 * day).toISOString() }];
   }
