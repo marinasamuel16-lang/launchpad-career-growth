@@ -184,3 +184,16 @@ textarea.qbox { resize: vertical; min-height: 64px; line-height: 1.4; font-weigh
 .inv-Started   { background: rgba(194, 75, 210, .16); color: #eaa6f5; }
 .inv-Submitted { background: rgba(180, 144, 255, .16); color: #cdb6ff; }
 .inv-Published { background: rgba(61, 220, 151, .14); color: #8eeac0; }
+
+/* v3: Guest leads */
+table.leads { min-width: 860px; }
+.lead-src { display: block; margin-top: 3px; color: var(--violet-hi); }
+.lead-pill { font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 4px 8px; border-radius: 6px; white-space: nowrap; display: inline-block; }
+.lead-New       { background: rgba(236, 226, 255, .08); color: var(--muted); }
+.lead-Contacted { background: rgba(90, 184, 255, .12); color: #9fd4ff; }
+.lead-Invited   { background: rgba(255, 181, 71, .12); color: #ffcf85; }
+.lead-Recorded  { background: rgba(61, 220, 151, .14); color: #8eeac0; }
+.lead-Notnow    { background: rgba(255, 138, 150, .10); color: #ffb0b9; }
+.fmt { display: block; margin-top: 6px; font-size: 12px; color: var(--ink-2); font-weight: 700; white-space: nowrap; }
+.drawer select.input { appearance: auto; }
+@media (max-width: 760px) { table.leads { min-width: 0; } table.leads td.c-drop { grid-column: 1 / -1; } }

@@ -15,8 +15,9 @@
   const fmtDateTime = (d) => new Date(d).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
   const initials = (n) => String(n || "?").trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 
-  let DROPS = [], INVITES = [], NOMS = [];
-  const view = { tab: "subs", q: "", status: "All", invQ: "" };
+  let DROPS = [], INVITES = [], NOMS = [], LEADS = [];
+  let leadsReady = true; // false until the guest_leads table exists
+  const view = { tab: "subs", q: "", status: "All", invQ: "", leadQ: "", leadF: "All" };
   const avatarCache = {};
 
   function toast(msg) {
@@ -85,13 +86,15 @@
   $("#signout").onclick = async () => { if (sb) await sb.auth.signOut(); location.reload(); };
 
   async function load() {
-    const [d, i, n] = await Promise.all([
+    const [d, i, n, l] = await Promise.all([
       sb.from("leader_drops").select("*").order("submission_timestamp", { ascending: false }),
       sb.from("leader_drop_invites").select("*").order("created_at", { ascending: false }),
       sb.from("leader_drop_nominations").select("*").order("created_at", { ascending: false }),
+      sb.from("guest_leads").select("*").order("created_at", { ascending: false }),
     ]);
     if (d.error || i.error || n.error) toast("Some data didn’t load. Refresh to try again.");
-    DROPS = d.data || []; INVITES = i.data || []; NOMS = n.data || [];
+    DROPS = d.data || []; INVITES = i.data || []; NOMS = n.data || []; LEADS = l.data || [];
+    leadsReady = !l.error;
     // headshot thumbnails
     await Promise.all(DROPS.filter((r) => r.headshot_url && !avatarCache[r.headshot_url]).map(async (r) => {
       avatarCache[r.headshot_url] = await signed(r.headshot_url);
@@ -111,7 +114,7 @@
   function renderDash() {
     const counts = Object.fromEntries(STATUSES.map((s) => [s, DROPS.filter((r) => r.status === s).length]));
     const openInv = INVITES.filter((i) => !i.submitted_at).length;
-    const TABS = [["subs", "Submissions", DROPS.length], ["create", "Create Leader Drop", null], ["invites", "Invitations", INVITES.length], ["noms", "Nominations", NOMS.length]];
+    const TABS = [["subs", "Submissions", DROPS.length], ["leads", "Leads", LEADS.length], ["create", "Create Leader Drop", null], ["invites", "Invitations", INVITES.length], ["noms", "Nominations", NOMS.length]];
     amain.innerHTML = `
       <section class="a-hero">
         <div>
@@ -128,7 +131,7 @@
       </nav>
       <section id="tabBody"></section>`;
     amain.querySelectorAll("[data-tab]").forEach((b) => (b.onclick = () => { view.tab = b.dataset.tab; renderDash(); }));
-    ({ subs: renderSubs, create: renderCreate, invites: renderInvites, noms: renderNoms })[view.tab]();
+    ({ subs: renderSubs, leads: renderLeads, create: renderCreate, invites: renderInvites, noms: renderNoms })[view.tab]();
   }
 
   function filtered() {
@@ -383,14 +386,14 @@ ${linkFor(inv)}
       <div class="create-wrap">
         <form class="create" id="createForm" novalidate>
           <div>
-            <p class="eyebrow">New invitation</p>
+            <p class="eyebrow">New invitation${pf.leadId ? " · from your Leads" : ""}</p>
             <h3 class="create-title">Create Leader Drop</h3>
             <p class="small" style="margin:4px 0 0">The leader sees their name and these three questions the moment they open the link.</p>
           </div>
           <div class="create-grid2">
             <div class="field"><label for="c-name">Leader name</label><input class="input" id="c-name" required maxlength="120" placeholder="Michael Johnson" value="${esc(pf.name || "")}"></div>
-            <div class="field"><label for="c-title">Title</label><input class="input" id="c-title" maxlength="160" placeholder="President"></div>
-            <div class="field"><label for="c-company">Company</label><input class="input" id="c-company" maxlength="160" placeholder="NJII"></div>
+            <div class="field"><label for="c-title">Title</label><input class="input" id="c-title" maxlength="160" placeholder="President" value="${esc(pf.title || "")}"></div>
+            <div class="field"><label for="c-company">Company</label><input class="input" id="c-company" maxlength="160" placeholder="NJII" value="${esc(pf.company || "")}"></div>
             <div class="field"><label for="c-linkedin">LinkedIn URL</label><input class="input" id="c-linkedin" maxlength="300" inputmode="url" autocapitalize="off" placeholder="linkedin.com/in/…" value="${esc(pf.linkedin || "")}"></div>
           </div>
           <div class="fields" style="margin-top:0">
@@ -430,6 +433,7 @@ ${linkFor(inv)}
       }
       INVITES.unshift(made);
       lastCreated = made;
+      if (pf.leadId) await saveLead(pf.leadId, { invite_id: made.id, format: "leader_drop", status: "Invited" }, true);
       renderDash();
       toast("Invitation created");
     };
@@ -547,6 +551,238 @@ ${linkFor(inv)}
     }));
   }
 
+  // ---------- leads ----------
+  const LEAD_STATES = ["New", "Contacted", "Invited", "Recorded", "Not now"];
+  const LEAD_FIELDS = ["name", "title", "company", "linkedin", "email", "source", "topic", "notes", "status", "live_date"];
+  function leadInvite(l) { return l.invite_id ? INVITES.find((i) => i.id === l.invite_id) : null; }
+  // A Leader Drop lead counts as Recorded as soon as its invitation is submitted.
+  function leadStatus(l) {
+    const inv = leadInvite(l);
+    if (inv && inv.submitted_at && l.status !== "Not now") return "Recorded";
+    return l.status;
+  }
+  async function saveLead(id, patch, quiet) {
+    const l = LEADS.find((x) => x.id === id);
+    if (!l) return false;
+    const prev = { ...l };
+    Object.assign(l, patch);
+    if (!DEMO) {
+      const { error } = await sb.from("guest_leads").update(patch).eq("id", id);
+      if (error) { Object.assign(l, prev); toast("Couldn’t save that lead."); return false; }
+    }
+    if (!quiet) toast("Lead saved");
+    return true;
+  }
+  function liveInviteText(l) {
+    const first = String(l.name || "").trim().split(/\s+/)[0] || "there";
+    return `Hi ${first}!
+
+I’m Marina Samuel, an NJIT alum (Class of 2025) and the host of LaunchPad EIC, a career podcast for people in the first few years of their careers.
+
+I’d love to have you on for a short conversation${l.topic ? ` about ${l.topic.replace(/[.\s]+$/, "")}` : ""}. Would you be open to being a guest?
+
+It’s very casual and only about 10 minutes long. I’ll send over a short document with the topic and a few questions beforehand.
+
+Best,
+Marina Samuel`;
+  }
+
+  function renderLeads() {
+    const body = $("#tabBody");
+    if (!leadsReady) {
+      body.innerHTML = `<div class="empty"><b>Leads isn’t switched on yet.</b>The database table for leads hasn’t been created. Once it is, refresh this page.</div>`;
+      return;
+    }
+    body.innerHTML = `
+      <div class="toolbar">
+        <label class="search"><span class="sr-only">Search leads</span>
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input class="input" id="lq" type="search" placeholder="Search names, companies, topics…" value="${esc(view.leadQ)}">
+        </label>
+        <button class="btn btn-primary btn-sm" type="button" id="addLead">+ Add lead</button>
+      </div>
+      <div class="chips" role="group" aria-label="Filter leads by status" style="margin-bottom:14px">
+        ${["All", ...LEAD_STATES].map((s) => `<button class="chip" type="button" data-lf="${s}" aria-pressed="${view.leadF === s}">${s}</button>`).join("")}
+      </div>
+      <div id="leadRows"></div>`;
+    $("#lq").oninput = (e) => { view.leadQ = e.target.value; paintLeads(); };
+    $("#addLead").onclick = () => openLeadDrawer(null);
+    body.querySelectorAll("[data-lf]").forEach((b) => (b.onclick = () => {
+      view.leadF = b.dataset.lf;
+      body.querySelectorAll("[data-lf]").forEach((x) => x.setAttribute("aria-pressed", x === b));
+      paintLeads();
+    }));
+    paintLeads();
+  }
+
+  function paintLeads() {
+    const box = $("#leadRows");
+    const q = view.leadQ.trim().toLowerCase();
+    const rows = LEADS.filter((l) => (view.leadF === "All" || leadStatus(l) === view.leadF) &&
+      (!q || [l.name, l.title, l.company, l.topic, l.source, l.notes].some((v) => (v || "").toLowerCase().includes(q))));
+    if (!LEADS.length) {
+      box.innerHTML = `<div class="empty"><b>No leads yet.</b>Add anyone you might want on the show. When you’re ready, turn them into a Leader Drop or a live interview with one click.</div>`;
+      return;
+    }
+    if (!rows.length) { box.innerHTML = `<div class="empty"><b>No matches.</b>Try a different name or status.</div>`; return; }
+    box.innerHTML = `
+      <div class="table-wrap"><table class="leads">
+        <thead><tr><th>Lead</th><th>Topic idea</th><th>Status</th><th>Added</th><th></th></tr></thead>
+        <tbody>
+          ${rows.map((l) => {
+            const st = leadStatus(l);
+            const inv = leadInvite(l);
+            const fmt = l.format === "leader_drop" ? `<span class="fmt">Leader Drop</span>` : l.format === "live" ? `<span class="fmt">Live${l.live_date ? ` · ${fmtDate(l.live_date + "T12:00:00")}` : ""}</span>` : "";
+            return `<tr data-lead="${l.id}" tabindex="0" aria-label="Edit ${esc(l.name)}">
+              <td class="c-who"><b>${esc(l.name)}</b><span class="small" style="display:block">${esc([l.title, l.company].filter(Boolean).join(" · ") || "—")}</span>
+                ${l.source ? `<span class="small lead-src">${esc(l.source)}</span>` : ""}</td>
+              <td class="c-drop"><div class="drop-cell">${l.topic ? esc(l.topic) : `<span class="small">—</span>`}</div></td>
+              <td><span class="lead-pill lead-${st.replace(/\s/g, "")}">${esc(st)}</span>${fmt}</td>
+              <td><span class="date">${fmtDate(l.created_at)}</span></td>
+              <td><div class="row-actions">
+                ${inv
+                  ? `<button class="btn btn-ghost btn-sm" type="button" data-leadinv="${l.id}">Copy Leader Drop invite</button>`
+                  : `<button class="btn btn-primary btn-sm" type="button" data-todrop="${l.id}">→ Leader Drop</button>`}
+                <button class="btn btn-ghost btn-sm" type="button" data-tolive="${l.id}">${l.format === "live" ? "Live invite" : "→ Live interview"}</button>
+              </div></td>
+            </tr>`;
+          }).join("")}
+        </tbody>
+      </table></div>`;
+    box.querySelectorAll("tr[data-lead]").forEach((tr) => {
+      tr.addEventListener("click", (e) => { if (e.target.closest("select,button,a")) return; openLeadDrawer(tr.dataset.lead); });
+      tr.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target === tr) openLeadDrawer(tr.dataset.lead); });
+    });
+    box.querySelectorAll("[data-todrop]").forEach((b) => (b.onclick = () => leadToDrop(b.dataset.todrop)));
+    box.querySelectorAll("[data-tolive]").forEach((b) => (b.onclick = () => leadToLive(b.dataset.tolive)));
+    box.querySelectorAll("[data-leadinv]").forEach((b) => (b.onclick = async () => {
+      const l = LEADS.find((x) => x.id === b.dataset.leadinv);
+      const inv = leadInvite(l);
+      if (inv) { await copyInvitation(inv); if (l.status === "New" || l.status === "Contacted") await saveLead(l.id, { status: "Invited" }, true); paintLeads(); }
+    }));
+  }
+
+  // One click: jump to Create Leader Drop with everything filled in.
+  function leadToDrop(id) {
+    const l = LEADS.find((x) => x.id === id);
+    prefill = {
+      name: l.name, title: l.title, company: l.company, linkedin: l.linkedin, leadId: l.id,
+      note: [l.source && `Lead source: ${l.source}`, l.topic && `Topic idea: ${l.topic}`].filter(Boolean).join(" · ") || null,
+    };
+    lastCreated = null;
+    view.tab = "create"; renderDash();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // One click: copy a ready-to-send live interview invitation and mark the lead Invited.
+  async function leadToLive(id) {
+    const l = LEADS.find((x) => x.id === id);
+    const first = l.format !== "live";
+    await copy(liveInviteText(l), "Live interview invite copied — paste it into LinkedIn, text, or email");
+    if (first) await saveLead(l.id, { format: "live", status: l.status === "Recorded" ? "Recorded" : "Invited", live_invited_at: new Date().toISOString() }, true);
+    paintLeads();
+    openLeadDrawer(l.id, true);
+  }
+
+  function openLeadDrawer(id, showLive) {
+    const isNew = !id;
+    const l = isNew ? { status: "New" } : LEADS.find((x) => x.id === id);
+    if (!l) return;
+    closeDrawer();
+    const bg = document.createElement("div"); bg.className = "drawer-bg";
+    const d = document.createElement("aside"); d.className = "drawer"; d.setAttribute("role", "dialog"); d.setAttribute("aria-modal", "true");
+    d.setAttribute("aria-label", isNew ? "Add lead" : l.name);
+    const inv = leadInvite(l);
+    const f = (key, label, attrs = "") => `<div class="field"><label for="lf-${key}">${label}</label><input class="input" id="lf-${key}" ${attrs} value="${esc(l[key] || "")}"></div>`;
+    d.innerHTML = `
+      <div class="drawer-head">
+        <p class="eyebrow" style="margin:0">${isNew ? "New lead" : "Lead"}</p>
+        <button class="icon-btn" type="button" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
+      <form id="leadForm" class="fields" novalidate>
+        <div class="create-grid2">
+          ${f("name", "Name", 'required maxlength="120" placeholder="Jane Smith"')}
+          ${f("title", "Title", 'maxlength="160" placeholder="Engineering Manager"')}
+          ${f("company", "Company", 'maxlength="160" placeholder="PSEG"')}
+          ${f("linkedin", "LinkedIn URL", 'maxlength="300" inputmode="url" autocapitalize="off" placeholder="linkedin.com/in/…"')}
+          ${f("email", "Email", 'type="email" maxlength="200" autocapitalize="off" placeholder="optional"')}
+          ${f("source", "How you found them", 'maxlength="200" placeholder="NJIT alum, met at career fair…"')}
+        </div>
+        <div class="field"><label for="lf-topic">Topic idea</label><input class="input" id="lf-topic" maxlength="200" placeholder="switching from engineering to product" value="${esc(l.topic || "")}"></div>
+        <div class="field"><label for="lf-notes">Notes</label><textarea class="input qbox" id="lf-notes" rows="3" maxlength="2000">${esc(l.notes || "")}</textarea></div>
+        <div class="create-grid2">
+          <div class="field"><label for="lf-status">Status</label><select class="input" id="lf-status">${LEAD_STATES.map((s) => `<option ${s === l.status ? "selected" : ""}>${s}</option>`).join("")}</select></div>
+          ${l.format === "live" ? `<div class="field"><label for="lf-live_date">Live recording date</label><input class="input" id="lf-live_date" type="date" value="${esc(l.live_date || "")}"></div>` : ""}
+        </div>
+        <div class="field-err" id="lf-err" hidden></div>
+        <div class="a-row">
+          <button class="btn btn-primary" type="submit" id="lf-go">${isNew ? "Add lead" : "Save"}</button>
+          ${isNew ? "" : `<button class="btn btn-text btn-sm" type="button" id="lf-del" style="color:#ff8a96">Delete lead</button>`}
+        </div>
+      </form>
+      ${isNew ? "" : `
+      <div class="answer">
+        <div class="qn">Turn into a guest</div>
+        <div class="a-row">
+          ${inv ? `<button class="btn btn-ghost btn-sm" type="button" data-dinv>Copy Leader Drop invite</button>
+                   <span class="small" style="align-self:center">Leader Drop: <span class="inv-pill inv-${invStatus(inv)}">${invStatus(inv)}</span></span>`
+                : `<button class="btn btn-primary btn-sm" type="button" data-ddrop>→ Leader Drop</button>`}
+          <button class="btn btn-ghost btn-sm" type="button" data-dlive>${l.format === "live" ? "Copy live invite again" : "→ Live interview"}</button>
+        </div>
+        ${l.format === "live" || showLive ? `
+          <p class="small" style="margin:14px 0 6px">Live interview invitation${l.live_invited_at ? ` · first copied ${fmtDateTime(l.live_invited_at)}` : ""}. Edit before sending if you like:</p>
+          <textarea class="input qbox" id="liveMsg" rows="11">${esc(liveInviteText(l))}</textarea>
+          <div class="a-row"><button class="btn btn-ghost btn-sm" type="button" data-copylive>Copy this message</button></div>` : ""}
+      </div>`}`;
+    document.body.append(bg, d);
+    document.body.style.overflow = "hidden";
+    const onKey = (e) => { if (e.key === "Escape") closeDrawer(); };
+    document.addEventListener("keydown", onKey);
+    d._off = () => document.removeEventListener("keydown", onKey);
+    bg.onclick = closeDrawer;
+    d.querySelector("[data-close]").onclick = closeDrawer;
+    (isNew ? d.querySelector("#lf-name") : d.querySelector("[data-close]")).focus();
+
+    d.querySelector("#leadForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const err = d.querySelector("#lf-err"); err.hidden = true;
+      const val = (k) => { const el = d.querySelector(`#lf-${k}`); return el ? el.value.trim() : undefined; };
+      const row = {};
+      LEAD_FIELDS.forEach((k) => { const v = val(k); if (v !== undefined) row[k] = v || null; });
+      if (!row.name) { d.querySelector("#lf-name").setAttribute("aria-invalid", "true"); d.querySelector("#lf-name").focus(); return; }
+      row.status = row.status || "New";
+      if (row.linkedin) row.linkedin = normLinkedin(row.linkedin);
+      const btn = d.querySelector("#lf-go"); btn.disabled = true;
+      if (isNew) {
+        let made;
+        if (DEMO) made = { id: crypto.randomUUID(), created_at: new Date().toISOString(), format: null, invite_id: null, ...row };
+        else {
+          const { data, error } = await sb.from("guest_leads").insert(row).select().single();
+          if (error) { err.hidden = false; err.textContent = "Couldn’t add the lead: " + error.message; btn.disabled = false; return; }
+          made = data;
+        }
+        LEADS.unshift(made);
+        toast("Lead added");
+      } else if (!(await saveLead(l.id, row))) { btn.disabled = false; return; }
+      closeDrawer(); renderDash();
+    };
+    if (!isNew) {
+      d.querySelector("#lf-del").onclick = async () => {
+        if (!confirm(`Delete ${l.name} from your leads? Any Leader Drop invitation already made stays.`)) return;
+        if (!DEMO) {
+          const { error } = await sb.from("guest_leads").delete().eq("id", l.id);
+          if (error) { toast("Couldn’t delete that lead."); return; }
+        }
+        LEADS = LEADS.filter((x) => x.id !== l.id);
+        closeDrawer(); renderDash();
+      };
+      d.querySelector("[data-ddrop]")?.addEventListener("click", () => { closeDrawer(); leadToDrop(l.id); });
+      d.querySelector("[data-dinv]")?.addEventListener("click", () => copyInvitation(inv));
+      d.querySelector("[data-dlive]").onclick = () => leadToLive(l.id);
+      d.querySelector("[data-copylive]")?.addEventListener("click", () => copy(d.querySelector("#liveMsg").value, "Live interview invite copied"));
+    }
+  }
+
   // ---------- demo data ----------
   function seedDemo() {
     const now = Date.now(), day = 86400000;
@@ -572,6 +808,12 @@ ${linkFor(inv)}
       { id: "inv-9", slug: "chris-lee-t8w4nb", leader_name: "Chris Lee", title: "Product Lead", company: "Prudential", created_at: iso(1.2), sent_at: iso(1.1), first_opened_at: null, started_at: null, submitted_at: null },
       { id: "inv-7", slug: "rachel-kim-q5r2xa", leader_name: "Rachel Kim", title: "Director of HR", company: "Hackensack Meridian", created_at: iso(0.3), sent_at: null, first_opened_at: null, started_at: null, submitted_at: null },
       ...DROPS.map((d, i) => ({ id: d.invite_id, slug: `${slug(d.name)}-a1b2c3`, leader_name: d.name, title: d.title, company: d.company, created_at: iso(i + 25), sent_at: iso(i + 25), first_opened_at: d.submission_timestamp, started_at: d.submission_timestamp, submitted_at: d.submission_timestamp })),
+    ];
+    LEADS = [
+      { id: "lead-1", name: "Jordan Reyes", title: "Senior Data Analyst", company: "Hackensack Meridian Health", linkedin: "https://www.linkedin.com/in/jordan-reyes", source: "NJIT alum, BME ’17", topic: "moving from analyst to manager without an MBA", status: "New", format: null, invite_id: null, created_at: iso(0.5) },
+      { id: "lead-2", name: "Tasha Greene", title: "Founder", company: "Greene Street Bakery", source: "Instagram follower", topic: "leaving a corporate job to start a small business", status: "Contacted", format: null, invite_id: null, created_at: iso(3) },
+      { id: "lead-3", name: "Sam Patel", title: "Engineering Manager", company: "PSEG", source: "Referred by Richard Klein", topic: "your first year managing former peers", status: "Invited", format: "leader_drop", invite_id: "inv-6", created_at: iso(6) },
+      { id: "lead-4", name: "Elena Novak", title: "Product Marketing Lead", company: "Prudential", source: "LinkedIn post on career pivots", topic: "career pivots", status: "Invited", format: "live", live_invited_at: iso(4), live_date: new Date(now + 6 * day).toISOString().slice(0, 10), invite_id: null, created_at: iso(8) },
     ];
     NOMS = [{ id: "n1", from_leader_id: "demo-1", nominee_name: "Rachel Kim", nominee_contact: "https://www.linkedin.com/in/rachel-kim", created_at: new Date(now - 0.2 * day).toISOString() }];
   }
