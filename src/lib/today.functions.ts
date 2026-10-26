@@ -47,9 +47,6 @@ export type TodayDashboard = {
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
 
-const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-2.5-flash";
-
 const WEEKLY_TARGET = 5;
 
 /** career_memory_entries.title is CHECK (length BETWEEN 1 AND 120). */
@@ -355,8 +352,8 @@ export const requestMove = createServerFn({ method: "POST" })
     let built = fallbackMove(category);
     let source = "template";
 
-    const key = process.env.LOVABLE_API_KEY;
-    if (key) {
+    const { chat, aiConfigured } = await import("@/lib/ai.server");
+    if (aiConfigured()) {
       try {
         const alreadySuggested = (recentOffered ?? [])
           .map((a: any) => `- ${a.action_text}`)
@@ -418,28 +415,23 @@ Bad: "Work on your visibility." / "Be more proactive." / Anything over two lines
 Respond with JSON only:
 {"action":"...","why":"...","minutes":10}`;
 
-        const res = await fetch(AI_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-          body: JSON.stringify({
-            model: MODEL,
-            messages: [
-              {
-                role: "system",
-                content:
-                  "You are a practical career coach writing one small daily action. Keep it under 120 characters. Respond with valid JSON only. Never invent facts about the person's employer, salary or performance.",
-              },
-              { role: "user", content: prompt },
-            ],
-            response_format: { type: "json_object" },
-          }),
+        const content = await chat(
+          [
+            {
+              role: "system",
+              content:
+                "You are a practical career coach writing one small daily action. Keep it under 120 characters. Respond with valid JSON only. Never invent facts about the person's employer, salary or performance.",
+            },
+            { role: "user", content: prompt },
+          ],
+          { json: true },
+        ).catch((e: unknown) => {
+          console.warn("[move] AI unavailable:", e instanceof Error ? e.message : e);
+          return null;
         });
 
-        if (res.ok) {
-          const json: any = await res.json();
-          const parsed = MoveSchema.safeParse(
-            JSON.parse(json?.choices?.[0]?.message?.content ?? "{}"),
-          );
+        if (content) {
+          const parsed = MoveSchema.safeParse(JSON.parse(content));
           if (parsed.success) {
             built = {
               action: parsed.data.action,
@@ -448,8 +440,6 @@ Respond with JSON only:
             };
             source = "ai";
           }
-        } else {
-          console.warn(`[move] upstream ${res.status}: ${await res.text()}`);
         }
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

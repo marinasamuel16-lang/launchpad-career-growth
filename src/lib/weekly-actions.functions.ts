@@ -159,10 +159,7 @@ export const saveReflectionFn = createServerFn({ method: "POST" })
 /* ------------------------------------------------------------------ */
 /* Draft a theme + candidate actions with AI                            */
 /* ------------------------------------------------------------------ */
-/* Note: this calls the Lovable AI gateway, which spends AI credits.    */
-
-const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-2.5-flash";
+/* Uses our own Gemini key (src/lib/ai.server.ts).                      */
 
 const DraftSchema = z.object({
   title: z.string().min(1).max(120),
@@ -192,8 +189,8 @@ export const draftThemeFn = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!role) throw new Error("Admins only.");
 
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) throw new Error("LOVABLE_API_KEY not configured");
+    const { chat, aiConfigured, aiErrorMessage } = await import("@/lib/ai.server");
+    if (!aiConfigured()) throw new Error("The AI isn't set up yet (GEMINI_API_KEY).");
 
     const prompt = `Below is the description or transcript of one episode of LaunchPad EIC, a career podcast for people 1-10 years into their careers. Turn it into a weekly theme with actions.
 
@@ -217,29 +214,19 @@ Bad: "Work on your networking." / "Be more visible."
 Respond ONLY with JSON, no prose:
 {"title":"...","subtitle":"...","summary":"...","key_advice":["..."],"actions":[{"title":"...","description":"...","difficulty":"easy|medium|stretch"}]}`;
 
-    const res = await fetch(AI_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: "system", content: "You are a sharp career editor. Respond with valid JSON only." },
-          { role: "user", content: prompt },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    });
-
-    if (!res.ok) {
-      const txt = await res.text();
-      console.error(`[AI draft] ${res.status}:`, txt);
-      if (res.status === 429) throw new Error("Rate limit reached — try again in a minute.");
-      if (res.status === 402) throw new Error("AI credits exhausted. Add credits to your workspace.");
-      throw new Error("AI request failed. Please try again.");
+    let content: string;
+    try {
+      content =
+        (await chat(
+          [
+            { role: "system", content: "You are a sharp career editor. Respond with valid JSON only." },
+            { role: "user", content: prompt },
+          ],
+          { json: true },
+        )) || "{}";
+    } catch (e) {
+      throw new Error(aiErrorMessage(e));
     }
-
-    const json: any = await res.json();
-    const content = json?.choices?.[0]?.message?.content ?? "{}";
     try {
       return DraftSchema.parse(JSON.parse(content));
     } catch {

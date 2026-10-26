@@ -1,0 +1,137 @@
+name: Website → launchpadeic.com
+
+# Builds the Career Hub and publishes it to Cloudflare on every change to main
+# (same setup as Page & Spin). Needs these GitHub secrets:
+#   CLOUDFLARE_API_TOKEN       — to publish (the account is worked out from the token)
+#   SUPABASE_SERVICE_ROLE_KEY  — server-only database key (Stripe webhook, AI notes)
+#   GEMINI_API_KEY             — AI coach, roadmap, Today's move, theme drafts
+#   STRIPE_SECRET_KEY          — Premium checkout
+#   STRIPE_WEBHOOK_SECRET      — confirms Stripe's payment messages are real
+#
+# Until launchpadeic.com is in the Cloudflare account, the site is published
+# only to its free workers.dev test address; the domain is attached on the
+# first run after it shows up.
+
+on:
+  push:
+    # move-off-lovable: try the new hosting on the test address before switching.
+    branches: [main, move-off-lovable]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-website
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      # The database the site uses. Set here (not only in .env) so the site
+      # keeps the right one even if another tool rewrites .env.
+      SUPABASE_URL: https://yvebvsgixedduxicjisv.supabase.co
+      SUPABASE_PUBLISHABLE_KEY: sb_publishable_onED9VwCRZH3WlupciFQlQ_TafeAa1c
+      VITE_SUPABASE_URL: https://yvebvsgixedduxicjisv.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_onED9VwCRZH3WlupciFQlQ_TafeAa1c
+      VITE_SUPABASE_PROJECT_ID: yvebvsgixedduxicjisv
+    steps:
+      - name: Ready to publish?
+        id: ready
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::notice title=Website::Not published: the CLOUDFLARE_API_TOKEN secret isn't set up yet."
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.ready.outputs.go == 'true'
+
+      - uses: oven-sh/setup-bun@v2
+        if: steps.ready.outputs.go == 'true'
+        with:
+          bun-version: 1.3.1
+
+      - name: Is launchpadeic.com in Cloudflare yet?
+        id: domain
+        if: steps.ready.outputs.go == 'true'
+        run: |
+          export CLOUDFLARE_API_TOKEN="$(printf '%s' "$CLOUDFLARE_API_TOKEN" | tr -d '[:space:]')"
+          zones=$(curl -sS "https://api.cloudflare.com/client/v4/zones?name=launchpadeic.com" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          if echo "$zones" | grep -q '"name":"launchpadeic.com"'; then
+            echo "Domain found in Cloudflare — attaching launchpadeic.com"
+            echo "ready=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice title=Domain::launchpadeic.com isn't in this Cloudflare account yet, so the site goes to its workers.dev test address only."
+            echo "ready=0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install
+        if: steps.ready.outputs.go == 'true'
+        run: |
+          # A few packages are listed at Lovable's private mirror; get them from npm instead.
+          sed -i 's#https://europe-west[0-9]*-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/#https://registry.npmjs.org/#g' bun.lock
+          bun install --frozen-lockfile
+
+      - name: Build
+        if: steps.ready.outputs.go == 'true'
+        env:
+          DOMAIN_READY: ${{ steps.domain.outputs.ready }}
+        run: |
+          bun run build
+          node scripts/cloudflare-config.mjs
+
+      - name: Publish
+        if: steps.ready.outputs.go == 'true'
+        run: |
+          # In case the token was pasted with a space or line break.
+          export CLOUDFLARE_API_TOKEN="$(printf '%s' "$CLOUDFLARE_API_TOKEN" | tr -d '[:space:]')"
+          # Describe the pasted key (never the key itself) so a wrong paste is easy to spot.
+          len=${#CLOUDFLARE_API_TOKEN}
+          case "$CLOUDFLARE_API_TOKEN" in
+            cfk_*)  kind="starting cfk_ — that's the Global API Key, not an API token" ;;
+            cfut_*) kind="starting cfut_ — a user API token (the right kind)" ;;
+            cfat_*) kind="starting cfat_ — an account API token (the right kind)" ;;
+            *) if [[ "$CLOUDFLARE_API_TOKEN" =~ ^[0-9a-f]+$ ]]; then kind="only 0-9 and a-f — looks like the old Global API Key or a token's ID, not the token"
+               else kind="no prefix — an older-style API token"; fi ;;
+          esac
+          echo "Token: $len characters, $kind"
+          npx --yes wrangler@4.149.0 deploy > deploy.log 2>&1 || {
+            cat deploy.log
+            echo "::error title=Cloudflare key::The pasted key is $len characters, $kind."
+            verify=$(curl -sS https://api.cloudflare.com/client/v4/user/tokens/verify \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" | head -c 1500 | tr '\n' ' ')
+            echo "::error title=Cloudflare check::$verify"
+            body=$(grep -v "^\s*$" deploy.log | tail -n 30)
+            body="${body//'%'/'%25'}"; body="${body//$'\r'/'%0D'}"; body="${body//$'\n'/'%0A'}"
+            echo "::error title=Publish::$body"
+            exit 1
+          }
+          tail -n 20 deploy.log
+          url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -n 1)
+          if [ -n "$url" ]; then echo "::notice title=Test address::$url"; fi
+
+      - name: Server secrets
+        if: steps.ready.outputs.go == 'true'
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+        run: |
+          export CLOUDFLARE_API_TOKEN="$(printf '%s' "$CLOUDFLARE_API_TOKEN" | tr -d '[:space:]')"
+          node -e '
+            const s = {};
+            for (const k of ["SUPABASE_SERVICE_ROLE_KEY", "GEMINI_API_KEY", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"])
+              if (process.env[k]) s[k] = process.env[k].trim();
+            require("fs").writeFileSync(process.env.RUNNER_TEMP + "/secrets.json", JSON.stringify(s));
+            const names = Object.keys(s).join(", ") || "none";
+            console.log("Secrets to set:", names);
+            console.log("::notice title=Server secrets::Passed to the site: " + names);
+          '
+          npx --yes wrangler@4.149.0 secret bulk "$RUNNER_TEMP/secrets.json" --name launchpad-career-hub
+          rm -f "$RUNNER_TEMP/secrets.json"

@@ -6,8 +6,6 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 /* Shared                                                              */
 /* ------------------------------------------------------------------ */
 
-const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-2.5-flash";
 
 const CategorySchema = z.enum([
   "win",
@@ -138,33 +136,27 @@ async function extractMemories(args: {
   // Nothing to read, or this exact note has already been processed.
   if (!note || checkIn.processed_at) return [];
 
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) {
-    console.warn("[checkin] LOVABLE_API_KEY not configured — skipping extraction");
+  const { chat, aiConfigured } = await import("@/lib/ai.server");
+  if (!aiConfigured()) {
+    console.warn("[checkin] no AI key configured (GEMINI_API_KEY) — skipping extraction");
     return [];
   }
 
   try {
-    const res = await fetch(AI_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: "system", content: EXTRACTION_SYSTEM },
-          { role: "user", content: note },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    });
-
-    if (!res.ok) {
-      console.warn(`[checkin] extraction upstream ${res.status}: ${await res.text()}`);
+    let content: string;
+    try {
+      content =
+        (await chat(
+          [
+            { role: "system", content: EXTRACTION_SYSTEM },
+            { role: "user", content: note },
+          ],
+          { json: true },
+        )) || "{}";
+    } catch (e) {
+      console.warn("[checkin] extraction failed:", e instanceof Error ? e.message : e);
       return [];
     }
-
-    const json: any = await res.json();
-    const content = json?.choices?.[0]?.message?.content ?? "{}";
     const parsed = ExtractionSchema.safeParse(JSON.parse(content));
     if (!parsed.success || parsed.data.entries.length === 0) return [];
 

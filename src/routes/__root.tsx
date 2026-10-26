@@ -116,10 +116,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
+// The app used to live at launchpad-career-growth.lovable.app. Send old links
+// (weekly emails, bookmarks, home-screen icons), and www., to the same page on
+// launchpadeic.com so everyone signs in at one address.
+const OLD_ADDRESS_REDIRECT = `if (location.hostname === "launchpad-career-growth.lovable.app" || location.hostname === "www.launchpadeic.com") location.replace("https://launchpadeic.com" + location.pathname + location.search + location.hash);`;
+
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
+        <script dangerouslySetInnerHTML={{ __html: OLD_ADDRESS_REDIRECT }} />
         <HeadContent />
       </head>
       <body>

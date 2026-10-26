@@ -17,9 +17,11 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedWatchRouteImport } from './routes/_authenticated/watch'
+import { Route as AuthenticatedTodayRouteImport } from './routes/_authenticated/today'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedCoachRouteImport } from './routes/_authenticated/coach'
+import { Route as AuthenticatedCareerRouteImport } from './routes/_authenticated/career'
 import { Route as ApiPublicStripeWebhookRouteImport } from './routes/api/public/stripe-webhook'
 import { Route as AuthenticatedSubscriptionSuccessRouteImport } from './routes/_authenticated/subscription.success'
 import { Route as AuthenticatedAdminThemesRouteImport } from './routes/_authenticated/admin.themes'
@@ -63,6 +65,11 @@ const AuthenticatedWatchRoute = AuthenticatedWatchRouteImport.update({
   path: '/watch',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedTodayRoute = AuthenticatedTodayRouteImport.update({
+  id: '/today',
+  path: '/today',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -76,6 +83,11 @@ const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
 const AuthenticatedCoachRoute = AuthenticatedCoachRouteImport.update({
   id: '/coach',
   path: '/coach',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedCareerRoute = AuthenticatedCareerRouteImport.update({
+  id: '/career',
+  path: '/career',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const ApiPublicStripeWebhookRoute = ApiPublicStripeWebhookRouteImport.update({
@@ -102,9 +114,11 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteWithChildren
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
+  '/career': typeof AuthenticatedCareerRoute
   '/coach': typeof AuthenticatedCoachRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/today': typeof AuthenticatedTodayRoute
   '/watch': typeof AuthenticatedWatchRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/admin/themes': typeof AuthenticatedAdminThemesRoute
@@ -116,9 +130,11 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRouteWithChildren
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
+  '/career': typeof AuthenticatedCareerRoute
   '/coach': typeof AuthenticatedCoachRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/today': typeof AuthenticatedTodayRoute
   '/watch': typeof AuthenticatedWatchRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/': typeof AuthenticatedIndexRoute
@@ -133,9 +149,11 @@ export interface FileRoutesById {
   '/auth': typeof AuthRouteWithChildren
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
+  '/_authenticated/career': typeof AuthenticatedCareerRoute
   '/_authenticated/coach': typeof AuthenticatedCoachRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/today': typeof AuthenticatedTodayRoute
   '/_authenticated/watch': typeof AuthenticatedWatchRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
@@ -151,9 +169,11 @@ export interface FileRouteTypes {
     | '/auth'
     | '/privacy'
     | '/terms'
+    | '/career'
     | '/coach'
     | '/onboarding'
     | '/profile'
+    | '/today'
     | '/watch'
     | '/auth/callback'
     | '/admin/themes'
@@ -165,9 +185,11 @@ export interface FileRouteTypes {
     | '/auth'
     | '/privacy'
     | '/terms'
+    | '/career'
     | '/coach'
     | '/onboarding'
     | '/profile'
+    | '/today'
     | '/watch'
     | '/auth/callback'
     | '/'
@@ -181,9 +203,11 @@ export interface FileRouteTypes {
     | '/auth'
     | '/privacy'
     | '/terms'
+    | '/_authenticated/career'
     | '/_authenticated/coach'
     | '/_authenticated/onboarding'
     | '/_authenticated/profile'
+    | '/_authenticated/today'
     | '/_authenticated/watch'
     | '/auth/callback'
     | '/_authenticated/'
@@ -259,6 +283,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWatchRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/today': {
+      id: '/_authenticated/today'
+      path: '/today'
+      fullPath: '/today'
+      preLoaderRoute: typeof AuthenticatedTodayRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/profile': {
       id: '/_authenticated/profile'
       path: '/profile'
@@ -278,6 +309,13 @@ declare module '@tanstack/react-router' {
       path: '/coach'
       fullPath: '/coach'
       preLoaderRoute: typeof AuthenticatedCoachRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/career': {
+      id: '/_authenticated/career'
+      path: '/career'
+      fullPath: '/career'
+      preLoaderRoute: typeof AuthenticatedCareerRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/api/public/stripe-webhook': {
@@ -305,9 +343,11 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedCareerRoute: typeof AuthenticatedCareerRoute
   AuthenticatedCoachRoute: typeof AuthenticatedCoachRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedTodayRoute: typeof AuthenticatedTodayRoute
   AuthenticatedWatchRoute: typeof AuthenticatedWatchRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAdminThemesRoute: typeof AuthenticatedAdminThemesRoute
@@ -315,9 +355,11 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedCareerRoute: AuthenticatedCareerRoute,
   AuthenticatedCoachRoute: AuthenticatedCoachRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedTodayRoute: AuthenticatedTodayRoute,
   AuthenticatedWatchRoute: AuthenticatedWatchRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAdminThemesRoute: AuthenticatedAdminThemesRoute,

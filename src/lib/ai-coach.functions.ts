@@ -2,28 +2,17 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-2.5-flash";
+type Msg = { role: "system" | "user" | "assistant"; content: string };
 
-async function callLovableAI(body: unknown): Promise<any> {
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) throw new Error("LOVABLE_API_KEY not configured");
-  const res = await fetch(AI_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${key}`,
-    },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const txt = await res.text();
-    console.error(`[AI] upstream error ${res.status}:`, txt);
-    if (res.status === 429) throw new Error("Rate limit reached — try again in a minute.");
-    if (res.status === 402) throw new Error("AI credits exhausted. Add credits to your workspace.");
-    throw new Error("AI request failed. Please try again.");
+// Our own Gemini key (see src/lib/ai.server.ts). Errors come back as plain
+// sentences the app can show.
+async function askAI(messages: Msg[], json = false): Promise<string> {
+  const { chat, aiErrorMessage } = await import("@/lib/ai.server");
+  try {
+    return await chat(messages, { json });
+  } catch (e) {
+    throw new Error(aiErrorMessage(e));
   }
-  return res.json();
 }
 
 const RoadmapSchema = z.object({
@@ -61,16 +50,14 @@ Return EXACTLY 6 milestones ordered from where they are today to their goal. For
 Respond ONLY with this JSON shape, no prose:
 {"milestones":[{"title":"...","description":"...","tasks":["...","..."]}, ...]}`;
 
-    const json = await callLovableAI({
-      model: MODEL,
-      messages: [
-        { role: "system", content: "You are a senior career coach. Respond with valid JSON only." },
-        { role: "user", content: prompt },
-      ],
-      response_format: { type: "json_object" },
-    });
-
-    const content = json?.choices?.[0]?.message?.content ?? "{}";
+    const content =
+      (await askAI(
+        [
+          { role: "system", content: "You are a senior career coach. Respond with valid JSON only." },
+          { role: "user", content: prompt },
+        ],
+        true,
+      )) || "{}";
     let parsed: z.infer<typeof RoadmapSchema>;
     try {
       parsed = RoadmapSchema.parse(JSON.parse(content));
@@ -183,8 +170,7 @@ Boundaries you must observe:
       ...(history ?? []).map((m) => ({ role: m.role, content: m.content })),
     ];
 
-    const json = await callLovableAI({ model: MODEL, messages });
-    const reply: string = json?.choices?.[0]?.message?.content ?? "Sorry, I couldn't generate a reply.";
+    const reply: string = (await askAI(messages as Msg[])) || "Sorry, I couldn't generate a reply.";
 
     await supabase.from("coach_messages").insert({
       user_id: userId,

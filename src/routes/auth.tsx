@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { LEGAL_VERSION } from "@/lib/legal";
 import logo from "@/assets/logo.png";
 
@@ -155,10 +154,15 @@ function AuthPage() {
               const redirect_uri = isCapacitor
                 ? "com.launchpadeic.app://auth/callback"
                 : `${window.location.origin}/auth/callback`;
-              const res = await lovable.auth.signInWithOAuth("google", { redirect_uri });
-              if (res.error) {
+              // Straight to Google through our own Supabase project (no Lovable
+              // sign-in service). Google sends people back to /auth/callback.
+              const { error } = await supabase.auth.signInWithOAuth({
+                provider: "google",
+                options: { redirectTo: redirect_uri },
+              });
+              if (error) {
                 setSubmitting(false);
-                toast.error(res.error.message);
+                toast.error(error.message || "Sign-in failed");
               }
             }}
           >
