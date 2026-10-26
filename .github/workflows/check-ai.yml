@@ -32,15 +32,16 @@ jobs:
               ]
             } + (if $lvl == "" then {} else {generationConfig: {thinkingConfig: {thinkingLevel: $lvl}}} end)'
           }
-          for round in 1 2; do
-            for m in gemini-flash-latest gemini-3.8-flash gemini-3.7-flash gemini-3.6-flash gemini-3.5-flash gemini-flash-lite-latest; do
+          for round in 1 2 3; do
+            for m in gemini-flash-latest gemini-3.7-flash gemini-3.6-flash gemini-3.5-flash gemini-3.5-flash-lite gemini-flash-lite-latest gemini-2.5-flash; do
               for lvl in "" low; do
+                case "$m" in gemini-2.5*) [ -n "$lvl" ] && continue;; esac
                 body "$lvl" > req.json
-                res=$(curl -sS -o out.json -w '%{http_code} %{time_total}' --max-time 60 \
+                res=$(curl -sS -o out.json -w '%{http_code} %{time_total}' --max-time 40 \
                   "https://generativelanguage.googleapis.com/v1beta/models/$m:generateContent" \
-                  -H "x-goog-api-key: $k" -H 'Content-Type: application/json' -d @req.json || echo "timeout 60")
+                  -H "x-goog-api-key: $k" -H 'Content-Type: application/json' -d @req.json || echo "timeout 40")
                 msg=$(jq -r '(.error | if . then "\(.status // "") \(.message // "" | .[0:100])" else empty end) // ((.candidates[0].content.parts // []) | map(.text // "") | join("") | "\(length) chars: \(.[0:70])")' out.json 2>/dev/null | tr '\n' ' ')
-                echo "::notice title=r$round $m thinking=${lvl:-default}::HTTP $res s — $msg"
+                echo "RESULT r$round $m thinking=${lvl:-default} :: HTTP $res s — $msg"
               done
             done
           done
