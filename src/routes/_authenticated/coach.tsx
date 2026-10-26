@@ -62,9 +62,13 @@ function Coach() {
   const chatFn = useServerFn(chatWithCoach);
   const clearFn = useServerFn(clearCoachHistory);
 
+  const coachKey = ["coach", user?.id] as const;
+
   const messagesQuery = useQuery({
-    queryKey: ["coach", user?.id],
+    queryKey: coachKey,
     enabled: !!user,
+    // A refetch while a reply is on its way would wipe the message just sent.
+    refetchOnWindowFocus: false,
     queryFn: async (): Promise<Msg[]> => {
       const { data, error } = await supabase
         .from("coach_messages")
@@ -78,14 +82,47 @@ function Coach() {
 
   const messages = messagesQuery.data ?? [];
 
+  // The message shows in the chat and the box clears the moment you hit send;
+  // the coach's reply follows. If sending fails, the message comes back out of
+  // the chat and into the box so nothing is lost.
   const sendMessage = useMutation({
-    mutationFn: async (message: string) => chatFn({ data: { message } }),
-    onSuccess: () => {
-      setInput("");
-      qc.invalidateQueries({ queryKey: ["coach"] });
+    mutationFn: async (vars: { message: string; fromInput: boolean }) =>
+      chatFn({ data: { message: vars.message } }),
+    onMutate: async ({ message, fromInput }) => {
+      await qc.cancelQueries({ queryKey: coachKey });
+      const tempId = `pending-${Date.now()}`;
+      qc.setQueryData<Msg[]>(coachKey, (old = []) => [
+        ...old,
+        { id: tempId, role: "user", content: message, created_at: new Date().toISOString() },
+      ]);
+      if (fromInput) setInput("");
+      return { tempId };
     },
-    onError: (e: Error) => toast.error(e.message),
+    onSuccess: (res, _vars, ctx) => {
+      const saved = [res.user, ...(res.assistant ? [res.assistant] : [])] as Msg[];
+      qc.setQueryData<Msg[]>(coachKey, (old = []) => [
+        ...old.filter((m) => m.id !== ctx?.tempId && !saved.some((s) => s.id === m.id)),
+        ...saved,
+      ]);
+      if (!res.assistant) qc.invalidateQueries({ queryKey: ["coach"] });
+    },
+    onError: (e: Error, vars, ctx) => {
+      qc.setQueryData<Msg[]>(coachKey, (old = []) => old.filter((m) => m.id !== ctx?.tempId));
+      if (vars.fromInput) setInput((cur) => (cur.trim() ? cur : vars.message));
+      toast.error(e.message || "The coach couldn't answer. Please try again.");
+    },
   });
+
+  // If the AI is slow, say so instead of spinning silently.
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (!sendMessage.isPending) {
+      setSlow(false);
+      return;
+    }
+    const t = setTimeout(() => setSlow(true), 10_000);
+    return () => clearTimeout(t);
+  }, [sendMessage.isPending]);
 
   const clearChat = useMutation({
     mutationFn: async () => clearFn(),
@@ -114,7 +151,7 @@ function Coach() {
   const handleSend = (text?: string) => {
     const msg = (text ?? input).trim();
     if (!msg || sendMessage.isPending) return;
-    sendMessage.mutate(msg);
+    sendMessage.mutate({ message: msg, fromInput: text === undefined });
   };
 
   return (
@@ -195,9 +232,10 @@ function Coach() {
         ))}
 
         {sendMessage.isPending && (
-          <div className="flex justify-start">
+          <div className="flex justify-start" role="status" aria-live="polite">
             <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-card border border-border/60 px-4 py-3 text-sm text-muted-foreground flex items-center gap-2">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Thinking…
+              <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+              {slow ? "Still thinking — the AI is busy, a few more seconds…" : "Thinking…"}
             </div>
           </div>
         )}
