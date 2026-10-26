@@ -28,7 +28,14 @@ jobs:
             msg=$(jq -r '(.error | if . then "\(.status // "") \(.message // "")" else empty end) // ((.candidates[0].content.parts // []) | map(.text // "") | join("") | .[0:120])' out.json | tr '\n' ' ' | head -c 400)
             echo "::notice title=$1::HTTP $code — $msg"
           }
-          ask "1 plain" '{"contents":[{"role":"user","parts":[{"text":"Reply with just OK"}]}]}'
-          ask "2 with system note" '{"systemInstruction":{"parts":[{"text":"You are a career coach."}]},"contents":[{"role":"user","parts":[{"text":"Reply with just OK"}]}]}'
-          ask "3 JSON answer" '{"systemInstruction":{"parts":[{"text":"Respond with valid JSON only."}]},"contents":[{"role":"user","parts":[{"text":"Give {\"ok\":true}"}]}],"generationConfig":{"responseMimeType":"application/json"}}'
-          ask "4 conversation" '{"systemInstruction":{"parts":[{"text":"You are a career coach."}]},"contents":[{"role":"user","parts":[{"text":"Hi"}]},{"role":"model","parts":[{"text":"Hello!"}]},{"role":"user","parts":[{"text":"Reply with just OK"}]}]}'
+          curl -sS "https://generativelanguage.googleapis.com/v1beta/models?pageSize=200" -H "x-goog-api-key: $k" \
+            | jq -r '[.models[] | select(.supportedGenerationMethods | index("generateContent")) | .name | sub("models/"; "") | select(test("flash"))] | join(", ")' > models.txt
+          echo "::notice title=Flash models this key can use::$(cat models.txt | head -c 900)"
+          for m in gemini-flash-latest gemini-flash-lite-latest $(tr ',' '\n' < models.txt | tr -d ' ' | grep -E '^gemini-[0-9.]+-flash(-lite)?$' | sort -Vr | head -4); do
+            code=$(curl -sS -o out.json -w '%{http_code}' \
+              "https://generativelanguage.googleapis.com/v1beta/models/$m:generateContent" \
+              -H "x-goog-api-key: $k" -H 'Content-Type: application/json' \
+              -d '{"contents":[{"role":"user","parts":[{"text":"Reply with just OK"}]}]}')
+            msg=$(jq -r '(.error | if . then "\(.status // "") \(.message // "" | .[0:120])" else empty end) // ((.candidates[0].content.parts // []) | map(.text // "") | join("") | .[0:40])' out.json | tr '\n' ' ')
+            echo "::notice title=try $m::HTTP $code — $msg"
+          done
