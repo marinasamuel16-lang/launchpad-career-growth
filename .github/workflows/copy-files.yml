@@ -1,0 +1,26 @@
+name: One-time move — copy stored files
+
+# Used during the switch-over from Lovable Cloud (see scripts/copy-storage.mjs).
+# Runs when .github/copy-files-trigger changes on the move-off-lovable branch,
+# or by hand from the Actions tab. Safe to re-run: files already copied are
+# skipped.
+
+on:
+  push:
+    branches: [move-off-lovable]
+    paths: [".github/copy-files-trigger"]
+  workflow_dispatch:
+
+jobs:
+  copy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Copy files
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/copy-storage.mjs
