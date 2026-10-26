@@ -92,9 +92,24 @@ function Coach() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["coach"] }); toast.success("Chat cleared"); },
   });
 
+  // The typing bar is pinned above the bottom nav, and it grows as you type.
+  // Measure it so the page always leaves enough room for the last answer.
+  const composerRef = useRef<HTMLDivElement>(null);
+  const [composerHeight, setComposerHeight] = useState(120);
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages.length, sendMessage.isPending]);
+    const el = composerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => setComposerHeight(el.offsetHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // The whole page scrolls (not the message list), so bring the newest
+  // message into view by scrolling the window.
+  useEffect(() => {
+    if (messages.length === 0 && !sendMessage.isPending) return;
+    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
+  }, [messages.length, sendMessage.isPending, composerHeight]);
 
   const handleSend = (text?: string) => {
     const msg = (text ?? input).trim();
@@ -103,7 +118,11 @@ function Coach() {
   };
 
   return (
-    <div className="min-h-screen pb-[calc(9rem+env(safe-area-inset-bottom))]">
+    <div
+      className="min-h-screen"
+      // Room for the typing bar + the 64px bottom nav + a little breathing space.
+      style={{ paddingBottom: `calc(${composerHeight + 64 + 16}px + env(safe-area-inset-bottom))` }}
+    >
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
@@ -124,6 +143,12 @@ function Coach() {
       </header>
       <ActionsStrip />
       <main ref={scrollRef} className="mx-auto w-full max-w-2xl px-4 py-4 space-y-3">
+        <p className="text-[11px] leading-snug text-muted-foreground">
+          LaunchPad Coach is an AI assistant, not a professional career counselor, therapist,
+          financial advisor, or attorney. Responses are for general informational purposes only
+          and should not be relied on as professional advice. Use your own judgment and consult a
+          qualified professional for important career, legal, or financial decisions.
+        </p>
 
         {messages.length === 0 && (
           <Card className="p-6 text-center space-y-4">
@@ -178,7 +203,10 @@ function Coach() {
         )}
       </main>
 
-      <div className="fixed bottom-[calc(64px+env(safe-area-inset-bottom))] left-0 right-0 z-40 border-t border-border/60 bg-background/85 backdrop-blur-xl">
+      <div
+        ref={composerRef}
+        className="fixed bottom-[calc(64px+env(safe-area-inset-bottom))] left-0 right-0 z-40 border-t border-border/60 bg-background/85 backdrop-blur-xl"
+      >
         <div className="mx-auto max-w-2xl px-4 py-3">
           <div className="flex gap-2 items-end">
             <Textarea
@@ -197,11 +225,8 @@ function Coach() {
               {sendMessage.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </Button>
           </div>
-          <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
-            LaunchPad Coach is an AI assistant, not a professional career counselor, therapist,
-            financial advisor, or attorney. Responses are for general informational purposes only
-            and should not be relied on as professional advice. Use your own judgment and consult a
-            qualified professional for important career, legal, or financial decisions.
+          <p className="mt-1.5 text-center text-[11px] leading-snug text-muted-foreground">
+            AI coach · general information, not professional advice
           </p>
         </div>
       </div>

@@ -152,8 +152,10 @@ Sending student data to a third-party model provider is a disclosure. It is
 permissible if the provider is your subprocessor acting under contract and does
 not use the data for its own purposes — but you must be able to state that in
 writing, and you must be able to show the model provider is contractually barred
-from training on it. Get that confirmation from Lovable in writing about the
-Gemini gateway before you sign anything. If you cannot get it, that is a material
+from training on it. The AI now runs on Google's Gemini API directly (no Lovable
+gateway since Oct 26, 2026): on Google's paid tier its terms bar using prompts
+for training — make sure billing is on and keep a copy of those terms before you
+sign anything. If you cannot get it, that is a material
 fact you need to disclose, and it may force you to a different AI provider with
 a zero-retention commitment.
 
@@ -303,8 +305,8 @@ higher-ed deal. Not needed for a pilot; needed for a real contract.
 8. Complete HECVAT 4 honestly. "No, and here is our timeline" scores better than
    a blank or an overstatement — reviewers are used to small vendors and are
    looking for candour and a plan, not perfection.
-9. Get written confirmation from Lovable that prompts through the AI gateway are
-   not retained or used for model training. This is the answer to a question you
+9. Keep Google's paid Gemini API terms on file (and billing turned on) showing
+   prompts are not used for model training. This is the answer to a question you
    will definitely be asked.
 10. Get insurance quotes so you know your floor before you negotiate the cap.
 

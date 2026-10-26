@@ -89,11 +89,10 @@ Provider's current subprocessors:
 
 | Subprocessor | Purpose | Location |
 |---|---|---|
-| Supabase Inc. | Database, authentication, storage | **[REGION]** |
-| Lovable | Application hosting, AI gateway | **[REGION]** |
-| Google LLC | AI inference (Gemini), OAuth | **[REGION]** |
+| Supabase Inc. | Database, authentication, storage | United States (US East, Virginia) |
+| Google LLC | AI inference (Gemini API), Google sign-in | United States / Google global infrastructure |
 | Stripe, Inc. | Payment processing | United States |
-| Cloudflare, Inc. | Edge delivery | Global |
+| Cloudflare, Inc. | Application hosting and edge delivery | Global |
 
 Provider will give Institution **[30] days'** written notice before adding or
 replacing a subprocessor, and Institution may object on reasonable data-protection

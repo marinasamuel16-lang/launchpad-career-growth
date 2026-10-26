@@ -22,11 +22,11 @@ Companion to HECVAT 4. Prepared for institutional vendor review.
 | | |
 |---|---|
 | Legal entity | **Marina Samuel (d/b/a LaunchPad EIC)**, a sole proprietorship (New Jersey) |
-| Address | [MAILING ADDRESS] |
+| Address | New Jersey, USA (postal address for formal notices available on request) |
 | Service | LaunchPad EIC — career-development web application and PWA |
 | Users | Early-career professionals, 1–10 years' experience |
 | Data classification | Low-sensitivity personal data. **No PHI, no government IDs, no financial account numbers, no SSNs.** |
-| Security contact | `security@launchpadeic.com` |
+| Security contact | `launchpadeic@gmail.com` |
 | Employees with production access | **[N — state the real number, even if it is 1]** |
 
 ---
@@ -35,14 +35,14 @@ Companion to HECVAT 4. Prepared for institutional vendor review.
 
 Single-page React application (TanStack Start) served from Cloudflare Workers,
 backed by Supabase (managed PostgreSQL, authentication, and object storage).
-Payments through Stripe Checkout. AI inference through the Lovable AI gateway to
-Google Gemini.
+Payments through Stripe Checkout. AI inference through Google's Gemini API,
+called directly with our own key. (Moved off Lovable's hosting on Oct 26, 2026.)
 
 | Component | Provider | Region | Handles |
 |---|---|---|---|
-| Application hosting | Cloudflare Workers via Lovable | Global edge | Requests; no persistent user data |
-| Database, auth, storage | Supabase (AWS) | **[CONFIRM — state the region]** | All application data |
-| AI inference | Google Gemini via Lovable AI gateway | **[CONFIRM]** | Prompt + profile/roadmap context |
+| Application hosting | Cloudflare Workers | Global edge | Requests; no persistent user data |
+| Database, auth, storage | Supabase (AWS) | United States — US East (Virginia) | All application data |
+| AI inference | Google Gemini API (Google LLC) | Google's global infrastructure | Prompt + profile/roadmap context |
 | Payments | Stripe | US | Card data — **never touches our systems** |
 | Video | YouTube (public channel) | Global | Public content only |
 
@@ -122,7 +122,7 @@ minutes, which prevents both forgery and replay.
 | Content Security Policy | **Report-Only, being tuned before enforcement. Target [DATE].** |
 | Dependency management | **[State your process — e.g. Dependabot on the GitHub repo. Turn it on if it is off; it is free and it is a HECVAT question.]** |
 | Penetration test | **None to date. [State whether one is planned and when.]** |
-| Vulnerability disclosure | `security@launchpadeic.com`; we acknowledge within 3 business days |
+| Vulnerability disclosure | `launchpadeic@gmail.com`; we acknowledge within 3 business days |
 
 ## 8. Artificial intelligence
 
@@ -131,10 +131,10 @@ HECVAT 4 added a dedicated AI section in February 2025. Expect these questions.
 | Question | Answer |
 |---|---|
 | Does the product use AI? | Yes. An AI career coach and a roadmap generator. |
-| Model and provider | Google Gemini 2.5 Flash, accessed through the Lovable AI gateway. |
+| Model and provider | Google Gemini (Flash), called directly through Google's Gemini API. |
 | What data is sent | The user's message, plus their profile fields (role, industry, years of experience, career goal) and their roadmap. |
-| Is institutional data used for training? | **No. [Obtain and attach written confirmation from Lovable and Google covering retention and training. This is the single most-asked AI question in higher-ed procurement — do not answer it from assumption.]** |
-| Retention by the provider | **[CONFIRM with the gateway provider]** |
+| Is institutional data used for training? | **No — on Google's paid Gemini API tier, Google's terms say prompts and responses are not used to improve its products. [Confirm billing is turned on for the Google project that owns the Gemini key, and attach Google's Gemini API terms. On the free tier this answer would be false. This is the single most-asked AI question in higher-ed procurement — do not answer it from assumption.]** |
+| Retention by the provider | **[CONFIRM from Google's Gemini API terms]** |
 | Human review of outputs | No. Outputs go straight to the user, labelled as AI-generated. |
 | Automated decision-making | None with legal or similarly significant effect. No screening, scoring, ranking, or eligibility determination. |
 | User disclosure | Disclosed in the Privacy Policy, in the Terms, at signup via a required acknowledgement checkbox, and persistently at the point of use on the Coach screen. |
@@ -149,7 +149,7 @@ HECVAT 4 added a dedicated AI section in February 2025. Expect these questions.
 | Data sold | **None.** No advertising, no data brokerage, no targeted advertising. |
 | Trackers | No third-party advertising or analytics trackers in the application. |
 | Universal opt-out / GPC | Nothing to opt out of today; committed to honouring GPC if that changes. |
-| Rights fulfilment | Self-serve export and self-serve deletion in-product. Other requests via `privacy@launchpadeic.com`, answered within 45 days. |
+| Rights fulfilment | Self-serve export and self-serve deletion in-product. Other requests via `launchpadeic@gmail.com`, answered within 45 days. |
 | Appeals | Documented appeal path; reviewed by a different person; 45-day response; referral to the NJ Division of Consumer Affairs on denial. |
 | Deletion | Enforced by `ON DELETE CASCADE` foreign keys from all 20 user-scoped tables to `auth.users`. Deletion is a database guarantee, not a manual checklist. |
 | Consent records | Version of Terms and Privacy Policy accepted, plus timestamps, stored per user. |
@@ -189,7 +189,7 @@ compromises the confidentiality, integrity, or availability of the service.
 **Process.**
 
 1. **Detect & triage** — provider alerts, user or researcher report to
-   `security@launchpadeic.com`, or internal discovery. Severity assigned within
+   `launchpadeic@gmail.com`, or internal discovery. Severity assigned within
    **24 hours**.
 2. **Contain** — revoke credentials, rotate keys, disable affected functionality.
 3. **Assess** — determine what data, whose data, and how much. Preserve logs.
@@ -205,7 +205,7 @@ compromises the confidentiality, integrity, or availability of the service.
 5. **Remediate & review** — fix the root cause; written post-incident report to
    affected institutions within **30 days**.
 
-**Contacts:** `security@launchpadeic.com` · escalation: **[NAME, PHONE]**
+**Contacts:** `launchpadeic@gmail.com` · escalation: **[NAME, PHONE]**
 
 ## 13. Compliance posture — stated plainly
 

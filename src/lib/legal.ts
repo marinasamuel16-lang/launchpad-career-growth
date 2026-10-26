@@ -10,7 +10,7 @@
  * Bump this whenever either document changes materially, and consider
  * re-prompting existing users when you do.
  */
-export const LEGAL_VERSION = "2026-09-11";
+export const LEGAL_VERSION = "2026-10-26";
 
 /** Human-readable form of LEGAL_VERSION, for display on the legal pages. */
-export const LEGAL_VERSION_LABEL = "September 11, 2026";
+export const LEGAL_VERSION_LABEL = "October 26, 2026";

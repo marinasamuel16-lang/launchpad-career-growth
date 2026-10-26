@@ -135,9 +135,9 @@ function AccessibilityPage() {
               If something in LaunchPad EIC stops you completing a task, email{" "}
               <a
                 className="text-primary hover:underline"
-                href="mailto:accessibility@launchpadeic.com"
+                href="mailto:launchpadeic@gmail.com?subject=Accessibility"
               >
-                accessibility@launchpadeic.com
+                launchpadeic@gmail.com
               </a>
               . Tell us the page, what you were trying to do, and what happened — and your device,
               browser, and assistive technology if you know them.
@@ -156,9 +156,9 @@ function AccessibilityPage() {
               success criterion with our conformance level and remarks, is available from{" "}
               <a
                 className="text-primary hover:underline"
-                href="mailto:accessibility@launchpadeic.com"
+                href="mailto:launchpadeic@gmail.com?subject=Accessibility"
               >
-                accessibility@launchpadeic.com
+                launchpadeic@gmail.com
               </a>
               , along with our remediation schedule.
             </p>

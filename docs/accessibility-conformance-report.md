@@ -5,7 +5,7 @@
 **Name of product:** LaunchPad EIC (web application / PWA)
 **Version:** commit `a4eea16` · evaluated 11 September 2026
 **Report date:** 11 September 2026
-**Contact:** accessibility@launchpadeic.com
+**Contact:** launchpadeic@gmail.com
 **Vendor:** Marina Samuel, sole proprietor t/a LaunchPad EIC — New Jersey
 
 ---

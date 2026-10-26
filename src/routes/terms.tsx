@@ -23,11 +23,11 @@ export const Route = createFileRoute("/terms")({
   component: TermsPage,
 });
 
-// TODO before this is the published agreement: fill in [MAILING ADDRESS].
 // Note: the app no longer hosts user-generated content (the community feed was
 // removed), so no DMCA designated agent is required.
 const ENTITY = "Marina Samuel, a sole proprietor doing business as LaunchPad EIC";
-const ENTITY_ADDRESS = "[MAILING ADDRESS]";
+const ENTITY_LOCATION = "New Jersey, USA";
+const CONTACT_EMAIL = "launchpadeic@gmail.com";
 const VENUE_COUNTY = "Essex";
 
 function TermsPage() {
@@ -44,8 +44,8 @@ function TermsPage() {
 
         <div className="mt-8 space-y-8 text-sm leading-relaxed text-foreground/90">
           <p>
-            These Terms are between you and <strong>{ENTITY}</strong>, at {ENTITY_ADDRESS} ("we,"
-            "us"). By creating an account or using LaunchPad EIC (the "Service"), you agree to them.
+            These Terms are between you and <strong>{ENTITY}</strong>, based in {ENTITY_LOCATION}
+            ("we," "us"). By creating an account or using LaunchPad EIC (the "Service"), you agree to them.
           </p>
 
           <section className="space-y-2">
@@ -122,8 +122,8 @@ function TermsPage() {
             <p>
               If something in the app concerns you — an AI response that seems harmful, a bug that
               exposes something it shouldn't — tell us at{" "}
-              <a className="text-primary hover:underline" href="mailto:safety@launchpadeic.com">
-                safety@launchpadeic.com
+              <a className="text-primary hover:underline" href="mailto:launchpadeic@gmail.com?subject=Safety%20report">
+                launchpadeic@gmail.com
               </a>
               .
             </p>
@@ -135,8 +135,8 @@ function TermsPage() {
               LaunchPad EIC does not host content posted by users. The episodes, written material,
               and app itself are ours or licensed to us. If you believe something in the Service
               infringes your copyright, email{" "}
-              <a className="text-primary hover:underline" href="mailto:support@launchpadeic.com">
-                support@launchpadeic.com
+              <a className="text-primary hover:underline" href="mailto:launchpadeic@gmail.com">
+                launchpadeic@gmail.com
               </a>{" "}
               with enough detail to identify the work and where it appears, and we will look into it
               promptly.
@@ -233,9 +233,9 @@ function TermsPage() {
               . If any part of the Service is a barrier for you, email{" "}
               <a
                 className="text-primary hover:underline"
-                href="mailto:accessibility@launchpadeic.com"
+                href="mailto:launchpadeic@gmail.com?subject=Accessibility"
               >
-                accessibility@launchpadeic.com
+                launchpadeic@gmail.com
               </a>{" "}
               and we will fix it or provide the information another way.
             </p>
@@ -314,28 +314,18 @@ function TermsPage() {
           <section className="space-y-2">
             <h2 className="text-lg font-semibold">19. Contact</h2>
             <p>
-              General and terms questions:{" "}
-              <a className="text-primary hover:underline" href="mailto:support@launchpadeic.com">
-                support@launchpadeic.com
-              </a>
-              . Safety and content reports:{" "}
-              <a className="text-primary hover:underline" href="mailto:safety@launchpadeic.com">
-                safety@launchpadeic.com
-              </a>
-              . Privacy:{" "}
-              <a className="text-primary hover:underline" href="mailto:privacy@launchpadeic.com">
-                privacy@launchpadeic.com
-              </a>
-              . Accessibility:{" "}
-              <a
-                className="text-primary hover:underline"
-                href="mailto:accessibility@launchpadeic.com"
-              >
-                accessibility@launchpadeic.com
-              </a>
-              .
+              Email us at{" "}
+              <a className="text-primary hover:underline" href={`mailto:${CONTACT_EMAIL}`}>
+                {CONTACT_EMAIL}
+              </a>{" "}
+              for anything: general and terms questions, safety and content reports, privacy
+              requests, or accessibility. Putting the topic in the subject line helps us get to it
+              faster.
             </p>
-            <p className="text-muted-foreground">Postal: {ENTITY}, {ENTITY_ADDRESS}.</p>
+            <p className="text-muted-foreground">
+              {ENTITY}, {ENTITY_LOCATION}. A postal address for formal legal notices is available on
+              request by email.
+            </p>
           </section>
         </div>
       </div>

@@ -23,13 +23,13 @@ export const Route = createFileRoute("/privacy")({
   component: PrivacyPage,
 });
 
-// TODO before this is the published policy: replace ENTITY and ENTITY_ADDRESS
-// with the registered legal entity. A privacy policy that does not identify the
-// controller is incomplete under every US state privacy law, and a university
-// cannot contract with a product name.
+// The controller is named (not just the product name): every US state privacy
+// law expects it, and a university can't contract with a product name.
 const ENTITY = "Marina Samuel, a sole proprietor doing business as LaunchPad EIC";
-const ENTITY_ADDRESS = "[MAILING ADDRESS]";
-const DATA_REGION = "[REGION]";
+const ENTITY_LOCATION = "New Jersey, USA";
+const CONTACT_EMAIL = "launchpadeic@gmail.com";
+// Supabase project launchpad-career-hub runs in AWS us-east-1.
+const DATA_REGION = "the United States (US East, Virginia)";
 
 function PrivacyPage() {
   return (
@@ -47,10 +47,10 @@ function PrivacyPage() {
           <section className="space-y-2">
             <h2 className="text-lg font-semibold">Who we are</h2>
             <p>
-              LaunchPad EIC is operated by <strong>{ENTITY}</strong>, at {ENTITY_ADDRESS}. We are
-              the data controller for the personal data described here. Contact us at{" "}
-              <a className="text-primary hover:underline" href="mailto:privacy@launchpadeic.com">
-                privacy@launchpadeic.com
+              LaunchPad EIC is operated by <strong>{ENTITY}</strong>, based in {ENTITY_LOCATION}. We
+              are the data controller for the personal data described here. Contact us at{" "}
+              <a className="text-primary hover:underline" href="mailto:launchpadeic@gmail.com?subject=Privacy%20request">
+                launchpadeic@gmail.com
               </a>
               .
             </p>
@@ -206,8 +206,7 @@ function PrivacyPage() {
               <li>
                 <strong>AI model provider</strong> — when you use the AI Coach or generate a
                 roadmap, your message plus relevant profile and roadmap context is sent to a
-                third-party AI model (currently Google's Gemini, accessed through our hosting
-                platform's AI gateway) to produce the response. It is not used to train that model.
+                third-party AI model (currently Google's Gemini, through Google's API) to produce the response. It is not used to train that model.
               </li>
               <li>
                 <strong>Payment processor</strong> — handles card details directly if you subscribe.
@@ -280,8 +279,8 @@ function PrivacyPage() {
             <p className="font-medium">How to make a request</p>
             <p>
               Email{" "}
-              <a className="text-primary hover:underline" href="mailto:privacy@launchpadeic.com">
-                privacy@launchpadeic.com
+              <a className="text-primary hover:underline" href="mailto:launchpadeic@gmail.com?subject=Privacy%20request">
+                launchpadeic@gmail.com
               </a>{" "}
               from the address on your account. We will respond within 45 days, and may extend once
               by a further 45 days where the request is complex, telling you why. We will not charge
@@ -317,9 +316,9 @@ function PrivacyPage() {
               . If any part of this app is a barrier for you, email{" "}
               <a
                 className="text-primary hover:underline"
-                href="mailto:accessibility@launchpadeic.com"
+                href="mailto:launchpadeic@gmail.com?subject=Accessibility"
               >
-                accessibility@launchpadeic.com
+                launchpadeic@gmail.com
               </a>{" "}
               and we will fix it or give you the information another way.
             </p>
@@ -348,18 +347,15 @@ function PrivacyPage() {
           <section className="space-y-2">
             <h2 className="text-lg font-semibold">Contact</h2>
             <p>
-              Privacy questions, requests, or appeals:{" "}
-              <a className="text-primary hover:underline" href="mailto:privacy@launchpadeic.com">
-                privacy@launchpadeic.com
-              </a>
-              . Accessibility:{" "}
+              Privacy questions, requests, or appeals, and accessibility issues:{" "}
               <a
                 className="text-primary hover:underline"
-                href="mailto:accessibility@launchpadeic.com"
+                href={`mailto:${CONTACT_EMAIL}?subject=Privacy%20request`}
               >
-                accessibility@launchpadeic.com
+                {CONTACT_EMAIL}
               </a>
-              . Postal: {ENTITY}, {ENTITY_ADDRESS}.
+              . {ENTITY}, {ENTITY_LOCATION}. A postal address for formal legal notices is available
+              on request by email.
             </p>
             <p className="text-muted-foreground">
               See also our{" "}
