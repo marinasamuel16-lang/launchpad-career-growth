@@ -1,0 +1,31 @@
+name: Fetch Leader Drops site files (one-off)
+on:
+  push:
+    branches: [tools/fetch-leader-drops]
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download the live site
+        run: |
+          B=https://launchpad-leader-drops.netlify.app
+          mkdir -p site headers
+          cd site
+          wget -q --mirror --page-requisites --adjust-extension --no-parent -e robots=off "$B/" "$B/admin" "$B/admin.html" "$B/drop.html" "$B/index.html" || true
+          cd ..
+          for p in / /admin /admin/ /drop/test-code /drop /index.html /admin.html /nominate /thanks; do
+            echo "=== $p" >> headers/responses.txt
+            curl -sS -o /dev/null -D - "$B$p" >> headers/responses.txt || true
+          done
+          find site -type f | sort > headers/files.txt
+          cat headers/files.txt
+      - name: Save to this branch
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add site headers
+          git commit -m "Leader Drops site files as served" || true
+          git push
