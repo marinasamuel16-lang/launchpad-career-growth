@@ -114,7 +114,7 @@
   function renderDash() {
     const counts = Object.fromEntries(STATUSES.map((s) => [s, DROPS.filter((r) => r.status === s).length]));
     const openInv = INVITES.filter((i) => !i.submitted_at).length;
-    const TABS = [["subs", "Submissions", DROPS.length], ["leads", "Leads", LEADS.length], ["create", "Create Leader Drop", null], ["invites", "Invitations", INVITES.length], ["noms", "Nominations", NOMS.length]];
+    const TABS = [["subs", "Submissions", DROPS.length], ["leads", "Live", LEADS.length], ["create", "Create Leader Drop", null], ["invites", "Invitations", INVITES.length], ["noms", "Nominations", NOMS.length]];
     amain.innerHTML = `
       <section class="a-hero">
         <div>
@@ -386,7 +386,7 @@ ${linkFor(inv)}
       <div class="create-wrap">
         <form class="create" id="createForm" novalidate>
           <div>
-            <p class="eyebrow">New invitation${pf.leadId ? " · from your Leads" : ""}</p>
+            <p class="eyebrow">New invitation${pf.leadId ? " · from your Live list" : ""}</p>
             <h3 class="create-title">Create Leader Drop</h3>
             <p class="small" style="margin:4px 0 0">The leader sees their name and these three questions the moment they open the link.</p>
           </div>
@@ -590,7 +590,7 @@ Marina Samuel`;
   function renderLeads() {
     const body = $("#tabBody");
     if (!leadsReady) {
-      body.innerHTML = `<div class="empty"><b>Leads isn’t switched on yet.</b>The database table for leads hasn’t been created. Once it is, refresh this page.</div>`;
+      body.innerHTML = `<div class="empty"><b>The Live tab isn’t switched on yet.</b>The database table for leads hasn’t been created. Once it is, refresh this page.</div>`;
       return;
     }
     body.innerHTML = `
