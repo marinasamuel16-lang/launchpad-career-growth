@@ -70,6 +70,10 @@ jobs:
         if: steps.ready.outputs.go == 'true'
         run: |
           export CLOUDFLARE_API_TOKEN="$CF_TOKEN"
+          all=$(curl -sS "https://api.cloudflare.com/client/v4/zones?per_page=50" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          names=$(echo "$all" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(", ".join(f"{z[\"name\"]} ({z[\"status\"]}, account {z[\"account\"][\"name\"]})" for z in d.get("result") or []) or "none")' || echo "?")
+          echo "::notice title=Domains this key can see::$names"
           zones=$(curl -sS "https://api.cloudflare.com/client/v4/zones?name=launchpadeic.com" \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
           if echo "$zones" | grep -q '"name":"launchpadeic.com"'; then
