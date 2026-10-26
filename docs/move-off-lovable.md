@@ -1,7 +1,7 @@
 # Moving the Career Hub off Lovable → launchpadeic.app
 
-Same move Page & Spin made in Oct 2026. Work lives on the `move-off-lovable`
-branch until switch-over, then merges to `main`.
+Same move Page & Spin made in Oct 2026. **Switched over Oct 26, 2026**: 7 accounts,
+every table row and all 24 stored files copied and checked; launchpadeic.app live.
 
 ## Where things live after the move
 

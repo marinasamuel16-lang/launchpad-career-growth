@@ -14,8 +14,7 @@ name: Website → launchpadeic.app
 
 on:
   push:
-    # move-off-lovable: try the new hosting on the test address before switching.
-    branches: [main, move-off-lovable]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
