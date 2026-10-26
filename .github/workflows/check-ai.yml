@@ -1,8 +1,9 @@
 name: Check the AI key
 
-# Sends Google's Gemini API one tiny request with the GEMINI_API_KEY secret and
-# reports what Google says (never the key itself). Runs when
-# .github/check-ai-trigger changes on move-off-lovable, or by hand.
+# Sends Google's Gemini API a realistic coach request with the GEMINI_API_KEY
+# secret and reports, for each model, what Google answered and how long it took
+# (never the key itself). Runs when .github/check-ai-trigger changes on
+# move-off-lovable, or by hand.
 
 on:
   push:
@@ -13,29 +14,33 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
-      - name: Ask Gemini to say OK
+      - name: Time a coach-style request on each model
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           k="$(printf '%s' "$GEMINI_API_KEY" | tr -d '[:space:]')"
-          echo "::notice title=Key shape::${#k} characters, starts with '${k:0:4}'"
-          ask() {  # $1 = label, $2 = JSON body
-            code=$(curl -sS -o out.json -w '%{http_code}' \
-              "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent" \
-              -H "x-goog-api-key: $k" -H 'Content-Type: application/json' -d "$2")
-            msg=$(jq -r '(.error | if . then "\(.status // "") \(.message // "")" else empty end) // ((.candidates[0].content.parts // []) | map(.text // "") | join("") | .[0:120])' out.json | tr '\n' ' ' | head -c 400)
-            echo "::notice title=$1::HTTP $code — $msg"
+          sys='You are a practical career coach for Alex, an early-career quality associate in pharma who wants to become a manager. Answer the question that was actually asked, directly, in 3-6 sentences. Use markdown when helpful.'
+          body() {  # $1 = thinking level ("" = model default)
+            jq -n --arg sys "$sys" --arg lvl "$1" '{
+              systemInstruction: {parts: [{text: $sys}]},
+              contents: [
+                {role: "user", parts: [{text: "Hi"}]},
+                {role: "model", parts: [{text: "Hi Alex! What would you like to work on today?"}]},
+                {role: "user", parts: [{text: "How do I get more visibility at work without sounding like I am bragging?"}]}
+              ]
+            } + (if $lvl == "" then {} else {generationConfig: {thinkingConfig: {thinkingLevel: $lvl}}} end)'
           }
-          curl -sS "https://generativelanguage.googleapis.com/v1beta/models?pageSize=200" -H "x-goog-api-key: $k" \
-            | jq -r '[.models[] | select(.supportedGenerationMethods | index("generateContent")) | .name | sub("models/"; "") | select(test("flash"))] | join(", ")' > models.txt
-          echo "::notice title=Flash models this key can use::$(cat models.txt | head -c 900)"
-          for m in gemini-flash-latest gemini-flash-lite-latest $(tr ',' '\n' < models.txt | tr -d ' ' | grep -E '^gemini-[0-9.]+-flash(-lite)?$' | sort -Vr | head -4); do
-            code=$(curl -sS -o out.json -w '%{http_code}' \
-              "https://generativelanguage.googleapis.com/v1beta/models/$m:generateContent" \
-              -H "x-goog-api-key: $k" -H 'Content-Type: application/json' \
-              -d '{"contents":[{"role":"user","parts":[{"text":"Reply with just OK"}]}]}')
-            msg=$(jq -r '(.error | if . then "\(.status // "") \(.message // "" | .[0:120])" else empty end) // ((.candidates[0].content.parts // []) | map(.text // "") | join("") | .[0:40])' out.json | tr '\n' ' ')
-            echo "::notice title=try $m::HTTP $code — $msg"
+          for round in 1 2; do
+            for m in gemini-flash-latest gemini-3.8-flash gemini-3.7-flash gemini-3.6-flash gemini-3.5-flash gemini-flash-lite-latest; do
+              for lvl in "" low; do
+                body "$lvl" > req.json
+                res=$(curl -sS -o out.json -w '%{http_code} %{time_total}' --max-time 60 \
+                  "https://generativelanguage.googleapis.com/v1beta/models/$m:generateContent" \
+                  -H "x-goog-api-key: $k" -H 'Content-Type: application/json' -d @req.json || echo "timeout 60")
+                msg=$(jq -r '(.error | if . then "\(.status // "") \(.message // "" | .[0:100])" else empty end) // ((.candidates[0].content.parts // []) | map(.text // "") | join("") | "\(length) chars: \(.[0:70])")' out.json 2>/dev/null | tr '\n' ' ')
+                echo "::notice title=r$round $m thinking=${lvl:-default}::HTTP $res s — $msg"
+              done
+            done
           done
