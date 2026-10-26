@@ -1,0 +1,9 @@
+/*
+  X-Frame-Options: DENY
+  Permissions-Policy: camera=(self), microphone=(self)
+
+/admin
+  Cache-Control: no-store
+
+/admin.html
+  Cache-Control: no-store
