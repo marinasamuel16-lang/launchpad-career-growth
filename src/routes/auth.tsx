@@ -72,7 +72,7 @@ function AuthPage() {
     }
     setSignUpErrors({});
     setSubmitting(true);
-    const { error } = await supabase.auth.signUp({
+    const { data: signUpData, error } = await supabase.auth.signUp({
       email: parsed.data.email,
       password: parsed.data.password,
       options: {
@@ -93,7 +93,10 @@ function AuthPage() {
       toast.error(error.message);
       return;
     }
-    toast.success("Account created! Check your email to verify, then sign in.");
+    // With email confirmation off, Supabase signs them straight in (and the
+    // effect above takes them into the app); with it on, they get an email.
+    if (signUpData.session) toast.success("Account created — welcome!");
+    else toast.success("Account created! Check your email to verify, then sign in.");
   };
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
