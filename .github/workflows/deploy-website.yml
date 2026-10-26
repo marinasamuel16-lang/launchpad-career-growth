@@ -65,6 +65,10 @@ jobs:
           if echo "$zones" | grep -q '"name":"launchpadeic.com"'; then
             echo "Domain found in Cloudflare — attaching launchpadeic.com"
             echo "ready=1" >> "$GITHUB_OUTPUT"
+          elif ! echo "$zones" | grep -q '"success":true'; then
+            # The key can't list domains; try attaching anyway (Cloudflare will say if it's missing).
+            echo "::notice title=Domain::Couldn't check for launchpadeic.com with this key, so trying to attach it."
+            echo "ready=1" >> "$GITHUB_OUTPUT"
           else
             echo "::notice title=Domain::launchpadeic.com isn't in this Cloudflare account yet, so the site goes to its workers.dev test address only."
             echo "ready=0" >> "$GITHUB_OUTPUT"
