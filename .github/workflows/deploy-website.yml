@@ -139,3 +139,24 @@ jobs:
           '
           npx --yes wrangler@4.149.0 secret bulk "$RUNNER_TEMP/secrets.json" --name launchpad-career-hub
           rm -f "$RUNNER_TEMP/secrets.json"
+
+      - name: Check the site and sign-in settings
+        if: steps.ready.outputs.go == 'true'
+        env:
+          DOMAIN_READY: ${{ steps.domain.outputs.ready }}
+        run: |
+          s=$(curl -sS "$SUPABASE_URL/auth/v1/settings" -H "apikey: $SUPABASE_PUBLISHABLE_KEY")
+          echo "$s" | python3 -c '
+          import json, sys
+          d = json.load(sys.stdin)
+          google = d.get("external", {}).get("google")
+          auto = d.get("mailer_autoconfirm")
+          print(f"::notice title=Sign-in settings::Google sign-in on: {google}. Confirm email off: {auto}.")
+          ' || echo "::warning title=Sign-in settings::Couldn't read them: $s"
+          urls=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -n 1)
+          if [ "$DOMAIN_READY" = "1" ]; then urls="$urls https://launchpadeic.com"; fi
+          sleep 20
+          for u in $urls; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$u/auth" || true)
+            echo "::notice title=Site check::$u/auth answered $code"
+          done
