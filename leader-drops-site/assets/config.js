@@ -19,6 +19,6 @@ window.LD_CONFIG = {
     youtube: "https://www.youtube.com/@LaunchPadEIC",
     // TODO: swap in the LaunchPad EIC LinkedIn page URL
     linkedin: "https://www.linkedin.com/search/results/all/?keywords=LaunchPad%20EIC",
-    site: "https://launchpadeic.com",
+    site: "https://launchpadeic.app",
   },
 };

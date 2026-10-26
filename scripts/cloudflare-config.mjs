@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 /*
  * Run after `vite build`: names the Cloudflare Worker, puts it on
- * launchpadeic.com (once that domain is in the Cloudflare account), and passes
+ * launchpadeic.app (once that domain is in the Cloudflare account), and passes
  * it the public database settings. Secrets (database service key, AI key,
  * Stripe keys) are added separately by .github/workflows/deploy-website.yml.
  *
  * DOMAIN_READY=1 (set by the workflow after it checks Cloudflare) attaches
- * launchpadeic.com and www.launchpadeic.com. Without it the site is published
+ * launchpadeic.app and www.launchpadeic.app. Without it the site is published
  * only to its free workers.dev test address.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 
 const CONFIG = ".output/server/wrangler.json";
-const DOMAINS = ["launchpadeic.com", "www.launchpadeic.com"];
+const DOMAINS = ["launchpadeic.app", "www.launchpadeic.app"];
 
 // Settings given to the build directly (see deploy-website.yml) win over .env.
 const env = {

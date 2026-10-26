@@ -1,4 +1,4 @@
-# Moving the Career Hub off Lovable → launchpadeic.com
+# Moving the Career Hub off Lovable → launchpadeic.app
 
 Same move Page & Spin made in Oct 2026. Work lives on the `move-off-lovable`
 branch until switch-over, then merges to `main`.
@@ -7,7 +7,7 @@ branch until switch-over, then merges to `main`.
 
 | What | Before | After |
 |---|---|---|
-| Website | launchpad-career-growth.lovable.app | launchpadeic.com (Cloudflare Worker `launchpad-career-hub`) |
+| Website | launchpad-career-growth.lovable.app | launchpadeic.app (Cloudflare Worker `launchpad-career-hub`) |
 | Database | Lovable Cloud `whqllgoqtztzbdegrnby` | Own Supabase project `launchpad-career-hub` — `yvebvsgixedduxicjisv` (same account as Page & Spin) |
 | Google sign-in | Lovable's sign-in service | Supabase Google provider (own Google client) |
 | AI | Lovable AI (`LOVABLE_API_KEY`) | Own Gemini key (`GEMINI_API_KEY`) — `src/lib/ai.server.ts` |
@@ -25,7 +25,7 @@ branch until switch-over, then merges to `main`.
 
 ## Steven's steps (things only an account owner can do)
 
-1. **Buy launchpadeic.com** in Cloudflare (the account that has pageandspin.com).
+1. **Buy launchpadeic.app** in Cloudflare (the account that has pageandspin.com).
 2. **Google sign-in** — new Google Cloud project "LaunchPad EIC" (so the Google
    screen doesn't say Page & Spin): consent screen (External, publish it),
    OAuth client (Web), redirect URI
@@ -33,8 +33,8 @@ branch until switch-over, then merges to `main`.
    ID + secret into Supabase → launchpad-career-hub → Authentication →
    Sign In / Providers → Google.
 3. **Supabase settings** (launchpad-career-hub → Authentication):
-   - URL Configuration → Site URL `https://launchpadeic.com`; Redirect URLs
-     `https://launchpadeic.com/**`, `https://www.launchpadeic.com/**`,
+   - URL Configuration → Site URL `https://launchpadeic.app`; Redirect URLs
+     `https://launchpadeic.app/**`, `https://www.launchpadeic.app/**`,
      `com.launchpadeic.app://auth/callback`
    - Sign In / Providers → Email → turn **off** "Confirm email" (the free plan's
      built-in email only reaches team members; the app handles either setting).
@@ -53,14 +53,14 @@ branch until switch-over, then merges to `main`.
    `.github/copy-files-trigger`, then remove the rule.
 4. Upload `leader-drops-site/` to Netlify (drag and drop on the site's Deploys page).
 5. Stripe: point the existing webhook endpoint at
-   `https://launchpadeic.com/api/public/stripe-webhook`
+   `https://launchpadeic.app/api/public/stripe-webhook`
    (events: checkout.session.completed, customer.subscription.created /
    updated / deleted).
-6. Merge `move-off-lovable` → `main` (publishes on launchpadeic.com), then
+6. Merge `move-off-lovable` → `main` (publishes on launchpadeic.app), then
    publish the Lovable project once so the old address forwards.
 7. Check: sign in (password + Google), AI coach, Today's move, Premium checkout,
    Leader Drop invite page + dashboard. Update the weekly email link and the
-   Sunday scheduled task to launchpadeic.com.
+   Sunday scheduled task to launchpadeic.app.
 
 Lovable Cloud's free plan limits database lookups (about an hour's cool-down
 after a burst), so the export in step 2 is a single query.

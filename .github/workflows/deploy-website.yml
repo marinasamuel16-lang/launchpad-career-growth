@@ -1,4 +1,4 @@
-name: Website → launchpadeic.com
+name: Website → launchpadeic.app
 
 # Builds the Career Hub and publishes it to Cloudflare on every change to main
 # (same setup as Page & Spin). Needs these GitHub secrets:
@@ -8,7 +8,7 @@ name: Website → launchpadeic.com
 #   STRIPE_SECRET_KEY          — Premium checkout
 #   STRIPE_WEBHOOK_SECRET      — confirms Stripe's payment messages are real
 #
-# Until launchpadeic.com is in the Cloudflare account, the site is published
+# Until launchpadeic.app is in the Cloudflare account, the site is published
 # only to its free workers.dev test address; the domain is attached on the
 # first run after it shows up.
 
@@ -65,7 +65,7 @@ jobs:
         with:
           bun-version: 1.3.1
 
-      - name: Is launchpadeic.com in Cloudflare yet?
+      - name: Is launchpadeic.app in Cloudflare yet?
         id: domain
         if: steps.ready.outputs.go == 'true'
         run: |
@@ -74,17 +74,17 @@ jobs:
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
           names=$(echo "$all" | jq -r 'if .success then ([.result[]? | "\(.name) (\(.status))"] | join(", ") | if . == "" then "none" else . end) else "error: \(.errors | tostring)" end' 2>&1 || true)
           echo "::notice title=Domains this key can see::$names"
-          zones=$(curl -sS "https://api.cloudflare.com/client/v4/zones?name=launchpadeic.com" \
+          zones=$(curl -sS "https://api.cloudflare.com/client/v4/zones?name=launchpadeic.app" \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
-          if echo "$zones" | grep -q '"name":"launchpadeic.com"'; then
-            echo "Domain found in Cloudflare — attaching launchpadeic.com"
+          if echo "$zones" | grep -q '"name":"launchpadeic.app"'; then
+            echo "Domain found in Cloudflare — attaching launchpadeic.app"
             echo "ready=1" >> "$GITHUB_OUTPUT"
           elif ! echo "$zones" | grep -q '"success":true'; then
             # The key can't list domains; try attaching anyway (Cloudflare will say if it's missing).
-            echo "::notice title=Domain::Couldn't check for launchpadeic.com with this key, so trying to attach it."
+            echo "::notice title=Domain::Couldn't check for launchpadeic.app with this key, so trying to attach it."
             echo "ready=1" >> "$GITHUB_OUTPUT"
           else
-            echo "::notice title=Domain::launchpadeic.com isn't in this Cloudflare account yet, so the site goes to its workers.dev test address only."
+            echo "::notice title=Domain::launchpadeic.app isn't in this Cloudflare account yet, so the site goes to its workers.dev test address only."
             echo "ready=0" >> "$GITHUB_OUTPUT"
           fi
 
@@ -167,7 +167,7 @@ jobs:
           print(f"::notice title=Sign-in settings::Google sign-in on: {google}. Confirm email off: {auto}.")
           ' || echo "::warning title=Sign-in settings::Couldn't read them: $s"
           urls=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -n 1)
-          if [ "$DOMAIN_READY" = "1" ]; then urls="$urls https://launchpadeic.com"; fi
+          if [ "$DOMAIN_READY" = "1" ]; then urls="$urls https://launchpadeic.app"; fi
           sleep 20
           for u in $urls; do
             code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$u/auth" || true)

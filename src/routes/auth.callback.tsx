@@ -15,7 +15,7 @@ export const Route = createFileRoute("/auth/callback")({
  * 2. PKCE ?code=... — exchange it for a session.
  *
  * Works for both:
- *   - Web:      https://launchpadeic.com/auth/callback
+ *   - Web:      https://launchpadeic.app/auth/callback
  *   - Capacitor iOS shell: com.launchpadeic.app://auth/callback
  *     (the iOS app should forward the deep link into the webview at /auth/callback)
  */

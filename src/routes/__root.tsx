@@ -118,8 +118,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 // The app used to live at launchpad-career-growth.lovable.app. Send old links
 // (weekly emails, bookmarks, home-screen icons), and www., to the same page on
-// launchpadeic.com so everyone signs in at one address.
-const OLD_ADDRESS_REDIRECT = `if (location.hostname === "launchpad-career-growth.lovable.app" || location.hostname === "www.launchpadeic.com") location.replace("https://launchpadeic.com" + location.pathname + location.search + location.hash);`;
+// launchpadeic.app so everyone signs in at one address.
+const OLD_ADDRESS_REDIRECT = `if (location.hostname === "launchpad-career-growth.lovable.app" || location.hostname === "www.launchpadeic.app") location.replace("https://launchpadeic.app" + location.pathname + location.search + location.hash);`;
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
