@@ -135,8 +135,8 @@ function PrivacyPage() {
               <li>To meet legal obligations and respond to valid legal process.</li>
             </ul>
             <p>
-              <strong>We do not use your data to train AI models</strong>, and our AI provider is
-              contractually prohibited from using it to train theirs.
+              <strong>We do not use your data to train AI models.</strong> When you use the AI
+              features, Google handles your request under its own Gemini API terms.
             </p>
             <p className="font-medium">Automated processing</p>
             <p>
@@ -206,7 +206,8 @@ function PrivacyPage() {
               <li>
                 <strong>AI model provider</strong> — when you use the AI Coach or generate a
                 roadmap, your message plus relevant profile and roadmap context is sent to a
-                third-party AI model (currently Google's Gemini, through Google's API) to produce the response. It is not used to train that model.
+                third-party AI model (currently Google's Gemini, through Google's API) to produce
+                the response. Google handles it under its own terms.
               </li>
               <li>
                 <strong>Payment processor</strong> — handles card details directly if you subscribe.

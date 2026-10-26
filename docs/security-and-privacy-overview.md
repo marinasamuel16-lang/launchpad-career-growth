@@ -133,7 +133,7 @@ HECVAT 4 added a dedicated AI section in February 2025. Expect these questions.
 | Does the product use AI? | Yes. An AI career coach and a roadmap generator. |
 | Model and provider | Google Gemini (Flash), called directly through Google's Gemini API. |
 | What data is sent | The user's message, plus their profile fields (role, industry, years of experience, career goal) and their roadmap. |
-| Is institutional data used for training? | **No — on Google's paid Gemini API tier, Google's terms say prompts and responses are not used to improve its products. [Confirm billing is turned on for the Google project that owns the Gemini key, and attach Google's Gemini API terms. On the free tier this answer would be false. This is the single most-asked AI question in higher-ed procurement — do not answer it from assumption.]** |
+| Is institutional data used for training? | **We don't train on it. Whether Google may use it depends on the Gemini API tier — on the paid tier Google's terms say it isn't used to improve its products; on the free tier it can be. [Confirm the key's Google project is on the paid tier before answering, and attach Google's terms. The public Privacy Policy deliberately makes no promise about Google.]** |
 | Retention by the provider | **[CONFIRM from Google's Gemini API terms]** |
 | Human review of outputs | No. Outputs go straight to the user, labelled as AI-generated. |
 | Automated decision-making | None with legal or similarly significant effect. No screening, scoring, ranking, or eligibility determination. |
