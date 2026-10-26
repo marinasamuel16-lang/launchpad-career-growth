@@ -31,6 +31,7 @@ export function aiErrorMessage(e: unknown): string {
   if (e instanceof AiError) {
     if (e.status === 0) return "The AI isn't set up yet. Please try again later.";
     if (e.status === 429) return "Rate limit reached — try again in a minute.";
+    if (e.status >= 500) return "The AI is very busy right now — try again in a minute.";
   }
   return "AI request failed. Please try again.";
 }
@@ -52,9 +53,19 @@ export async function chat(
 
 /*
  * Gemini's own API, which accepts both the older "AIza…" keys and the newer
- * "AQ.…" ones. Tries the always-current Flash model first, then a named one.
+ * "AQ.…" ones. Tries the always-current Flash model first; if Google says it's
+ * busy (503), rate-limited (429), erroring (500) or retired (404), it moves on
+ * to the next one. Oct 26, 2026: the newest Flash was answering "high demand"
+ * to most requests while 3.7 / 3.6 / Flash-Lite answered fine. The list ends
+ * with Google's always-current Lite alias so it keeps working as models retire.
  */
-const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash"];
+const GEMINI_MODELS = [
+  "gemini-flash-latest",
+  "gemini-3.7-flash",
+  "gemini-3.6-flash",
+  "gemini-flash-lite-latest",
+];
+const TRY_NEXT_MODEL = new Set([404, 429, 500, 502, 503, 504]);
 
 async function geminiChat(
   apiKey: string,
@@ -84,6 +95,7 @@ async function geminiChat(
     ...(json ? { generationConfig: { responseMimeType: "application/json" } } : {}),
   });
 
+  let lastStatus = 404;
   for (const model of GEMINI_MODELS) {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
@@ -94,10 +106,14 @@ async function geminiChat(
         body,
       },
     );
-    if (res.status === 404) continue; // model not offered: try the next one
     if (!res.ok) {
       const detail = (await res.text()).slice(0, 300);
-      console.error(`[AI] Gemini responded ${res.status}:`, detail);
+      lastStatus = res.status;
+      if (TRY_NEXT_MODEL.has(res.status)) {
+        console.warn(`[AI] ${model} answered ${res.status}, trying the next model:`, detail);
+        continue;
+      }
+      console.error(`[AI] Gemini (${model}) responded ${res.status}:`, detail);
       throw new AiError(`Gemini responded ${res.status}`, res.status);
     }
     const out = (await res.json()) as {
@@ -105,8 +121,8 @@ async function geminiChat(
     };
     return (out.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? "").join("");
   }
-  console.error("[AI] no Gemini model available");
-  throw new AiError("No Gemini model available", 404);
+  console.error(`[AI] every Gemini model was unavailable (last answer ${lastStatus})`);
+  throw new AiError("No Gemini model available", lastStatus === 404 ? 503 : lastStatus);
 }
 
 async function lovableChat(
