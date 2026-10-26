@@ -1,0 +1,155 @@
+=== /
+HTTP/2 200 
+accept-ranges: bytes
+age: 0
+cache-control: public,max-age=0,must-revalidate
+cache-status: "Netlify Edge"; fwd=miss; fwd-status=200; stored
+content-type: text/html; charset=UTF-8
+date: Mon, 26 Oct 2026 00:29:41 GMT
+etag: "a4446c4876d6865d354f75e1e135abb2-ssl"
+permissions-policy: camera=(self), microphone=(self)
+referrer-policy: strict-origin-when-cross-origin
+server: Netlify
+strict-transport-security: max-age=31536000; includeSubDomains; preload
+vary: Accept-Encoding
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-nf-request-id: 01M5TSSVJBGM786XT3X8V99HYH
+
+=== /admin
+HTTP/2 200 
+accept-ranges: bytes
+age: 0
+cache-control: no-store
+cache-status: "Netlify Edge"; fwd=miss; fwd-status=200; stored
+content-type: text/html; charset=UTF-8
+date: Mon, 26 Oct 2026 00:29:41 GMT
+etag: "bc57a1fd3530f2e996bf2880883b8977-ssl"
+permissions-policy: camera=(self), microphone=(self)
+referrer-policy: strict-origin-when-cross-origin
+server: Netlify
+strict-transport-security: max-age=31536000; includeSubDomains; preload
+vary: Accept-Encoding
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-nf-request-id: 01M5TSSVP5R7QZCXYXF8RMQ0CZ
+x-robots-tag: noindex, nofollow
+
+=== /admin/
+HTTP/2 301 
+cache-status: "Netlify Edge"; fwd=miss; fwd-status=200; stored
+content-type: text/html
+date: Mon, 26 Oct 2026 00:29:41 GMT
+location: /admin
+server: Netlify
+strict-transport-security: max-age=31536000; includeSubDomains; preload
+x-nf-request-id: 01M5TSSVSSS9G5DXRQ665AK2F6
+content-length: 98
+
+=== /drop/test-code
+HTTP/2 200 
+accept-ranges: bytes
+age: 0
+cache-control: public,max-age=0,must-revalidate
+cache-status: "Netlify Edge"; fwd=miss; fwd-status=200; stored
+content-type: text/html; charset=UTF-8
+date: Mon, 26 Oct 2026 00:29:41 GMT
+etag: "a4446c4876d6865d354f75e1e135abb2-ssl"
+permissions-policy: camera=(self), microphone=(self)
+referrer-policy: strict-origin-when-cross-origin
+server: Netlify
+strict-transport-security: max-age=31536000; includeSubDomains; preload
+vary: Accept-Encoding
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-nf-request-id: 01M5TSSVXQHS8PGR8FTCV8HGW8
+
+=== /drop
+HTTP/2 200 
+accept-ranges: bytes
+age: 0
+cache-control: public,max-age=0,must-revalidate
+cache-status: "Netlify Edge"; fwd=miss; fwd-status=200; stored
+content-type: text/html; charset=UTF-8
+date: Mon, 26 Oct 2026 00:29:41 GMT
+etag: "a4446c4876d6865d354f75e1e135abb2-ssl"
+permissions-policy: camera=(self), microphone=(self)
+referrer-policy: strict-origin-when-cross-origin
+server: Netlify
+strict-transport-security: max-age=31536000; includeSubDomains; preload
+vary: Accept-Encoding
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-nf-request-id: 01M5TSSW1JGHN16056FDP03Z8Q
+
+=== /index.html
+HTTP/2 200 
+accept-ranges: bytes
+age: 0
+cache-control: public,max-age=0,must-revalidate
+cache-status: "Netlify Edge"; fwd=miss; fwd-status=200; stored
+content-type: text/html; charset=UTF-8
+date: Mon, 26 Oct 2026 00:29:41 GMT
+etag: "a4446c4876d6865d354f75e1e135abb2-ssl"
+permissions-policy: camera=(self), microphone=(self)
+referrer-policy: strict-origin-when-cross-origin
+server: Netlify
+strict-transport-security: max-age=31536000; includeSubDomains; preload
+vary: Accept-Encoding
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-nf-request-id: 01M5TSSW6AGB0816EQFDMRJQVX
+
+=== /admin.html
+HTTP/2 200 
+accept-ranges: bytes
+age: 0
+cache-control: no-store
+cache-status: "Netlify Edge"; fwd=miss; fwd-status=200; stored
+content-type: text/html; charset=UTF-8
+date: Mon, 26 Oct 2026 00:29:42 GMT
+etag: "bc57a1fd3530f2e996bf2880883b8977-ssl"
+permissions-policy: camera=(self), microphone=(self)
+referrer-policy: strict-origin-when-cross-origin
+server: Netlify
+strict-transport-security: max-age=31536000; includeSubDomains; preload
+vary: Accept-Encoding
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-nf-request-id: 01M5TSSW9X1C98W6RTJ1FDJXC3
+x-robots-tag: noindex, nofollow
+
+=== /nominate
+HTTP/2 404 
+age: 0
+cache-control: public,max-age=0,must-revalidate
+cache-status: "Netlify Edge"; fwd=miss; fwd-status=404; stored
+content-type: text/html; charset=utf-8
+date: Mon, 26 Oct 2026 00:29:42 GMT
+etag: 1789516139-ssl
+permissions-policy: camera=(self), microphone=(self)
+referrer-policy: strict-origin-when-cross-origin
+server: Netlify
+strict-transport-security: max-age=31536000; includeSubDomains; preload
+vary: Accept-Encoding
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-nf-request-id: 01M5TSSWDQNKTW4Z373F2WN53Z
+
+=== /thanks
+HTTP/2 404 
+age: 0
+cache-control: public,max-age=0,must-revalidate
+cache-status: "Netlify Edge"; fwd=miss; fwd-status=404; stored
+content-type: text/html; charset=utf-8
+date: Mon, 26 Oct 2026 00:29:42 GMT
+etag: 1789516139-ssl
+permissions-policy: camera=(self), microphone=(self)
+referrer-policy: strict-origin-when-cross-origin
+server: Netlify
+strict-transport-security: max-age=31536000; includeSubDomains; preload
+vary: Accept-Encoding
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-nf-request-id: 01M5TSSWHDSN0HERRN6TRZ97A2
+
