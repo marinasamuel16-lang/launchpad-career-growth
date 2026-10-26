@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/auth/callback")({
@@ -24,12 +25,23 @@ function AuthCallback() {
 
   useEffect(() => {
     (async () => {
+      let next: "/" | "/auth" = "/";
       try {
         const url = new URL(window.location.href);
         const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
         const access_token = hash.get("access_token");
         const refresh_token = hash.get("refresh_token");
         const code = url.searchParams.get("code");
+        // If Google or the sign-in service refused, say so instead of
+        // silently landing back on the sign-in page.
+        const failure =
+          url.searchParams.get("error_description") ?? hash.get("error_description");
+        if (failure) {
+          console.error("OAuth callback error", failure);
+          toast.error(`Sign-in didn't finish: ${failure.replace(/\+/g, " ")}`, { duration: 10000 });
+          next = "/auth";
+          return;
+        }
 
         if (access_token && refresh_token) {
           await supabase.auth.setSession({ access_token, refresh_token });
@@ -39,7 +51,7 @@ function AuthCallback() {
       } catch (e) {
         console.error("OAuth callback error", e);
       } finally {
-        navigate({ to: "/", replace: true });
+        navigate({ to: next, replace: true });
       }
     })();
   }, [navigate]);
