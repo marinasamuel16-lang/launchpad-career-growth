@@ -31,18 +31,26 @@ export function aiErrorMessage(e: unknown): string {
   if (e instanceof AiError) {
     if (e.status === 0) return "The AI isn't set up yet. Please try again later.";
     if (e.status === 429) return "Rate limit reached — try again in a minute.";
+    if (e.status === 504) return "The AI took too long to answer — please send that again.";
+    if (e.status >= 500) return "The AI is very busy right now — try again in a minute.";
   }
   return "AI request failed. Please try again.";
 }
+
+export type ChatOptions = {
+  json?: boolean;
+  signal?: AbortSignal;
+  /** Longest the whole request may take, across every model tried. */
+  totalMs?: number;
+  /** Longest one model gets before we give up on it and try the next. */
+  perModelMs?: number;
+};
 
 /**
  * Sends a conversation and returns the reply text. With `json: true` the
  * model is asked for a JSON object only (callers still validate it).
  */
-export async function chat(
-  messages: ChatMessage[],
-  opts: { json?: boolean; signal?: AbortSignal } = {},
-): Promise<string> {
+export async function chat(messages: ChatMessage[], opts: ChatOptions = {}): Promise<string> {
   const gemini = process.env["GEMINI_API_KEY"]?.trim();
   if (gemini) return geminiChat(gemini, messages, opts);
   const lovable = process.env["LOVABLE_API_KEY"];
@@ -52,14 +60,71 @@ export async function chat(
 
 /*
  * Gemini's own API, which accepts both the older "AIza…" keys and the newer
- * "AQ.…" ones. Tries the always-current Flash model first, then a named one.
+ * "AQ.…" ones.
+ *
+ * Oct 26, 2026: Google's newest Flash models were swamped. Asked a coach-style
+ * question, gemini-flash-latest sat silent for over a minute instead of
+ * answering, and 3.7 / 3.8 kept saying "high demand" (sometimes only after a
+ * 5-second wait). That is what left the coach stuck on "Thinking…". So:
+ *
+ *  - every model gets a time limit; if it hasn't answered, we move on;
+ *  - a model that just failed is skipped for a couple of minutes, so the next
+ *    message doesn't wait on it again;
+ *  - "low" thinking: these models think before they write, and for a chat
+ *    reply the extra thinking mostly adds waiting, not quality;
+ *  - an empty answer counts as a failure, not as a reply.
+ *
+ * The key is on Google's free allowance. In the same test the full Flash
+ * models mostly answered "quota used up" (429) within a fraction of a second,
+ * while the Flash-Lite models answered every time in 1–2 seconds. So: try the
+ * fuller 3.6 / 3.5 Flash first for the best answers, then fall straight to
+ * Lite, which always answered. The busiest models (3.7, the "latest" alias that
+ * hung) go last.
  */
-const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash"];
+const GEMINI_MODELS = [
+  "gemini-3.6-flash",
+  "gemini-3.5-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-flash-lite-latest",
+  "gemini-3.7-flash",
+  "gemini-flash-latest",
+];
+const TRY_NEXT_MODEL = new Set([404, 408, 429, 500, 502, 503, 504]);
+
+/** Models that failed recently, and when to try them again (per server instance). */
+const coolingOff = new Map<string, number>();
+// "Quota used up" lasts a while; "busy" and timeouts usually pass sooner.
+const coolOffMs = (status: number) => (status === 429 ? 10 * 60_000 : 2 * 60_000);
+
+function modelsInOrder(): string[] {
+  const now = Date.now();
+  const ready = GEMINI_MODELS.filter((m) => (coolingOff.get(m) ?? 0) <= now);
+  // If everything failed recently, try them all anyway rather than give up.
+  return ready.length > 0 ? ready : GEMINI_MODELS;
+}
+
+/** An abort signal that fires after `ms`, or when `outer` fires. */
+function timeoutSignal(ms: number, outer?: AbortSignal): { signal: AbortSignal; done: () => void } {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(new Error("timeout")), ms);
+  const onOuter = () => ctrl.abort(outer?.reason);
+  if (outer) {
+    if (outer.aborted) ctrl.abort(outer.reason);
+    else outer.addEventListener("abort", onOuter, { once: true });
+  }
+  return {
+    signal: ctrl.signal,
+    done: () => {
+      clearTimeout(timer);
+      outer?.removeEventListener("abort", onOuter);
+    },
+  };
+}
 
 async function geminiChat(
   apiKey: string,
   messages: ChatMessage[],
-  { json, signal }: { json?: boolean; signal?: AbortSignal },
+  { json, signal, totalMs = 40_000, perModelMs = 12_000 }: ChatOptions,
 ): Promise<string> {
   const system = messages
     .filter((m) => m.role === "system")
@@ -78,35 +143,84 @@ async function geminiChat(
   if (contents[0]?.role === "model") contents.unshift({ role: "user", parts: [{ text: "Hi" }] });
   if (contents.length === 0) contents.push({ role: "user", parts: [{ text: "Hi" }] });
 
-  const body = JSON.stringify({
-    ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
-    contents,
-    ...(json ? { generationConfig: { responseMimeType: "application/json" } } : {}),
-  });
-
-  for (const model of GEMINI_MODELS) {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-      {
-        method: "POST",
-        signal,
-        headers: { "x-goog-api-key": apiKey, "Content-Type": "application/json" },
-        body,
+  const bodyFor = (thinking: boolean) =>
+    JSON.stringify({
+      ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
+      contents,
+      generationConfig: {
+        ...(json ? { responseMimeType: "application/json" } : {}),
+        ...(thinking ? { thinkingConfig: { thinkingLevel: "low" } } : {}),
       },
-    );
-    if (res.status === 404) continue; // model not offered: try the next one
-    if (!res.ok) {
-      const detail = (await res.text()).slice(0, 300);
-      console.error(`[AI] Gemini responded ${res.status}:`, detail);
-      throw new AiError(`Gemini responded ${res.status}`, res.status);
+    });
+
+  const deadline = Date.now() + totalMs;
+  let lastStatus = 503;
+  for (const model of modelsInOrder()) {
+    const left = deadline - Date.now();
+    if (left < 2_000) break;
+    if (signal?.aborted) throw new AiError("Request cancelled", 499);
+
+    let thinking = true;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const t = timeoutSignal(Math.min(perModelMs, left), signal);
+      const started = Date.now();
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+          {
+            method: "POST",
+            signal: t.signal,
+            headers: { "x-goog-api-key": apiKey, "Content-Type": "application/json" },
+            body: bodyFor(thinking),
+          },
+        );
+        if (!res.ok) {
+          const detail = (await res.text()).slice(0, 300);
+          lastStatus = res.status;
+          // A model that doesn't take the thinking setting: ask it again without.
+          if (res.status === 400 && thinking && /thinking/i.test(detail)) {
+            thinking = false;
+            continue;
+          }
+          if (TRY_NEXT_MODEL.has(res.status)) {
+            coolingOff.set(model, Date.now() + coolOffMs(res.status));
+            console.warn(`[AI] ${model} answered ${res.status} after ${Date.now() - started}ms, trying the next model:`, detail);
+            break;
+          }
+          console.error(`[AI] Gemini (${model}) responded ${res.status}:`, detail);
+          throw new AiError(`Gemini responded ${res.status}`, res.status);
+        }
+        const out = (await res.json()) as {
+          candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] }; finishReason?: string }[];
+        };
+        const cand = out.candidates?.[0];
+        const text = (cand?.content?.parts ?? [])
+          .filter((p) => !p.thought)
+          .map((p) => p.text ?? "")
+          .join("")
+          .trim();
+        if (!text) {
+          lastStatus = 502;
+          console.warn(`[AI] ${model} sent an empty answer (${cand?.finishReason ?? "no reason given"}), trying the next model`);
+          break;
+        }
+        console.log(`[AI] ${model} answered in ${Date.now() - started}ms`);
+        return text;
+      } catch (e) {
+        if (e instanceof AiError) throw e;
+        if (signal?.aborted) throw new AiError("Request cancelled", 499);
+        // Timed out or the connection dropped: give up on this model for now.
+        lastStatus = 504;
+        coolingOff.set(model, Date.now() + coolOffMs(504));
+        console.warn(`[AI] ${model} gave no answer within ${Date.now() - started}ms, trying the next model`);
+        break;
+      } finally {
+        t.done();
+      }
     }
-    const out = (await res.json()) as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-    };
-    return (out.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? "").join("");
   }
-  console.error("[AI] no Gemini model available");
-  throw new AiError("No Gemini model available", 404);
+  console.error(`[AI] no Gemini model answered in time (last answer ${lastStatus})`);
+  throw new AiError("No Gemini model available", lastStatus === 404 ? 503 : lastStatus);
 }
 
 async function lovableChat(
