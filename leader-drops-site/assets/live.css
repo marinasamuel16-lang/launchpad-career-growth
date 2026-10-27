@@ -100,7 +100,8 @@ h1.headline { font: 800 clamp(28px, 7.4vw, 38px)/1.12 var(--body); letter-spacin
 /* ---------- When / format stats ---------- */
 .promise { margin: 28px 0 8px; display: grid; border-top: 1px solid var(--line); }
 .promise div {
-  display: grid; grid-template-columns: 9.4em 1fr; align-items: baseline; gap: 14px;
+  /* The left column grows if the headline font is wider than expected (e.g. it didn't load). */
+  display: grid; grid-template-columns: minmax(9.4em, max-content) 1fr; align-items: baseline; gap: 14px;
   padding: 15px 0; border-bottom: 1px solid var(--line);
 }
 .promise strong { font-family: var(--display); font-weight: 400; font-size: 25px; letter-spacing: .02em; line-height: 1; text-transform: uppercase; white-space: nowrap; }

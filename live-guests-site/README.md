@@ -1,10 +1,6 @@
-# Live guests site
+# Live guests site (retired)
 
-The files served at https://launchpad-live-guests.netlify.app (one page per live
-guest at `/g/<code>`). Plain HTML/CSS/JS — no build step. Copied from the
-Netlify deploy of Oct 26, 2026.
-
-Heads up: `app.js` still reads from the OLD Lovable database (whqllgoqtztzbdegrnby)
-through `ld_live_get` / `ld_live_save`, not the Career Hub's own Supabase project.
-
-To publish a change: drag this folder onto the site's Deploys page in Netlify.
+Live guest pages now live on the Leader Drops site at
+`launchpad-leader-drops.netlify.app/live/<code>` (see `leader-drops-site/`).
+This folder only forwards old `launchpad-live-guests.netlify.app/g/<code>` links
+there. To publish: drag this folder onto the site's Deploys page in Netlify.

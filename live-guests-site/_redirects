@@ -1,1 +1,4 @@
-/g/*  /index.html  200
+# Live guest pages moved to the Leader Drops site (Oct 27, 2026).
+/g/*   https://launchpad-leader-drops.netlify.app/live/:splat   301!
+/      https://launchpadeic.app                                  302!
+/*     https://launchpad-leader-drops.netlify.app/live/:splat   301!

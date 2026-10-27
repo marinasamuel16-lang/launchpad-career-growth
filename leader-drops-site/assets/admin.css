@@ -197,3 +197,15 @@ table.leads { min-width: 860px; }
 .fmt { display: block; margin-top: 6px; font-size: 12px; color: var(--ink-2); font-weight: 700; white-space: nowrap; }
 .drawer select.input { appearance: auto; }
 @media (max-width: 760px) { table.leads { min-width: 0; } table.leads td.c-drop { grid-column: 1 / -1; } }
+
+/* Create: Leader Drop or Live interview */
+.fmt-switch { display: inline-flex; gap: 4px; padding: 4px; margin: 10px 0 12px; border-radius: 12px; background: var(--ground); border: 1px solid var(--line-strong); }
+.fmt-switch button {
+  appearance: none; border: 0; background: transparent; color: var(--ink-2); cursor: pointer;
+  font: 700 13px var(--body); padding: 8px 14px; border-radius: 9px; transition: background .15s var(--ease), color .15s var(--ease);
+}
+.fmt-switch button:hover { color: var(--ink); }
+.fmt-switch button[aria-checked="true"] { background: var(--grad); color: #fff; }
+.fmt-switch button:focus-visible { outline: 2px solid var(--violet-hi); outline-offset: 2px; }
+.fmt-drop { color: var(--muted); }
+.opt { font-weight: 500; color: var(--muted); }
