@@ -1,2 +1,4 @@
 /admin    /admin.html   200
 /drop/*   /index.html   200
+/live/*   /live.html    200
+/g/*      /live.html    200

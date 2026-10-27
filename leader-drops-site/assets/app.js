@@ -1106,6 +1106,11 @@
         return;
       }
       INVITE_DATA = res.data;
+      // Live interviews have their own page (date, calendar, questions, details).
+      if (INVITE_DATA.format === "live") {
+        location.replace("/live/" + encodeURIComponent(INVITE_DATA.slug) + (INVITE_DATA.preview ? "-preview" : ""));
+        return;
+      }
       INVITE = INVITE_DATA.invite_id;
       if (INVITE_DATA.submitted) {
         if (S.result) { history.replaceState({ step: "success" }, "", location.href); S.step = "success"; render(); return; }
