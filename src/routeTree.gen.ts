@@ -14,7 +14,7 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AccessibilityRouteImport } from './routes/accessibility'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
-import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedWatchRouteImport } from './routes/_authenticated/watch'
 import { Route as AuthenticatedTodayRouteImport } from './routes/_authenticated/today'
@@ -53,10 +53,10 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
+const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AuthenticatedRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/callback',
@@ -128,7 +128,7 @@ const AuthenticatedAdminExtrasRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof AuthenticatedIndexRoute
+  '/': typeof IndexRoute
   '/accessibility': typeof AccessibilityRoute
   '/auth': typeof AuthRouteWithChildren
   '/privacy': typeof PrivacyRoute
@@ -148,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
   '/accessibility': typeof AccessibilityRoute
   '/auth': typeof AuthRouteWithChildren
   '/privacy': typeof PrivacyRoute
@@ -160,7 +161,6 @@ export interface FileRoutesByTo {
   '/today': typeof AuthenticatedTodayRoute
   '/watch': typeof AuthenticatedWatchRoute
   '/auth/callback': typeof AuthCallbackRoute
-  '/': typeof AuthenticatedIndexRoute
   '/admin/extras': typeof AuthenticatedAdminExtrasRoute
   '/admin/themes': typeof AuthenticatedAdminThemesRoute
   '/playbook/$id': typeof AuthenticatedPlaybookIdRoute
@@ -169,6 +169,7 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/accessibility': typeof AccessibilityRoute
   '/auth': typeof AuthRouteWithChildren
@@ -182,7 +183,6 @@ export interface FileRoutesById {
   '/_authenticated/today': typeof AuthenticatedTodayRoute
   '/_authenticated/watch': typeof AuthenticatedWatchRoute
   '/auth/callback': typeof AuthCallbackRoute
-  '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/admin/extras': typeof AuthenticatedAdminExtrasRoute
   '/_authenticated/admin/themes': typeof AuthenticatedAdminThemesRoute
   '/_authenticated/playbook/$id': typeof AuthenticatedPlaybookIdRoute
@@ -212,6 +212,7 @@ export interface FileRouteTypes {
     | '/api/public/stripe-webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
     | '/accessibility'
     | '/auth'
     | '/privacy'
@@ -224,7 +225,6 @@ export interface FileRouteTypes {
     | '/today'
     | '/watch'
     | '/auth/callback'
-    | '/'
     | '/admin/extras'
     | '/admin/themes'
     | '/playbook/$id'
@@ -232,6 +232,7 @@ export interface FileRouteTypes {
     | '/api/public/stripe-webhook'
   id:
     | '__root__'
+    | '/'
     | '/_authenticated'
     | '/accessibility'
     | '/auth'
@@ -245,7 +246,6 @@ export interface FileRouteTypes {
     | '/_authenticated/today'
     | '/_authenticated/watch'
     | '/auth/callback'
-    | '/_authenticated/'
     | '/_authenticated/admin/extras'
     | '/_authenticated/admin/themes'
     | '/_authenticated/playbook/$id'
@@ -254,6 +254,7 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AccessibilityRoute: typeof AccessibilityRoute
   AuthRoute: typeof AuthRouteWithChildren
@@ -299,12 +300,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/': {
-      id: '/_authenticated/'
+    '/': {
+      id: '/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/auth/callback': {
       id: '/auth/callback'
@@ -408,7 +409,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedReviewRoute: typeof AuthenticatedReviewRoute
   AuthenticatedTodayRoute: typeof AuthenticatedTodayRoute
   AuthenticatedWatchRoute: typeof AuthenticatedWatchRoute
-  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAdminExtrasRoute: typeof AuthenticatedAdminExtrasRoute
   AuthenticatedAdminThemesRoute: typeof AuthenticatedAdminThemesRoute
   AuthenticatedPlaybookIdRoute: typeof AuthenticatedPlaybookIdRoute
@@ -423,7 +423,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedReviewRoute: AuthenticatedReviewRoute,
   AuthenticatedTodayRoute: AuthenticatedTodayRoute,
   AuthenticatedWatchRoute: AuthenticatedWatchRoute,
-  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAdminExtrasRoute: AuthenticatedAdminExtrasRoute,
   AuthenticatedAdminThemesRoute: AuthenticatedAdminThemesRoute,
   AuthenticatedPlaybookIdRoute: AuthenticatedPlaybookIdRoute,
@@ -445,6 +444,7 @@ const AuthRouteChildren: AuthRouteChildren = {
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AccessibilityRoute: AccessibilityRoute,
   AuthRoute: AuthRouteWithChildren,

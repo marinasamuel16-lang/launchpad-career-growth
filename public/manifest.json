@@ -2,7 +2,7 @@
   "name": "LaunchPad Career Hub",
   "short_name": "LaunchPad",
   "description": "Career growth tool from LaunchPad EIC — Watch, Ask, and follow your Roadmap.",
-  "start_url": "/?source=pwa",
+  "start_url": "/today?source=pwa",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",

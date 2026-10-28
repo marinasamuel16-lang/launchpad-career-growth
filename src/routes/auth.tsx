@@ -15,6 +15,9 @@ import { LEGAL_VERSION } from "@/lib/legal";
 import logo from "@/assets/logo.png";
 
 export const Route = createFileRoute("/auth")({
+  // ?mode=signup opens the Sign up tab (the overview page's "Create free account").
+  validateSearch: (search: Record<string, unknown>): { mode?: "signup" } =>
+    search.mode === "signup" ? { mode: "signup" } : {},
   component: AuthPage,
 });
 
@@ -34,6 +37,7 @@ const signInSchema = z.object({
 function AuthPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const { mode } = Route.useSearch();
   const [submitting, setSubmitting] = useState(false);
   const [agreed, setAgreed] = useState(false);
   // WCAG 3.3.1 — errors must be attached to the field that caused them, not
@@ -51,7 +55,7 @@ function AuthPage() {
   };
 
   useEffect(() => {
-    if (!loading && user) navigate({ to: "/", replace: true });
+    if (!loading && user) navigate({ to: "/today", replace: true });
   }, [loading, user, navigate]);
 
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -128,7 +132,9 @@ function AuthPage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
-          <img src={logo} alt="LaunchPad EIC logo" className="mx-auto h-20 w-auto object-contain" />
+          <Link to="/" className="inline-block" aria-label="About LaunchPad EIC">
+            <img src={logo} alt="LaunchPad EIC logo" className="mx-auto h-20 w-auto object-contain" />
+          </Link>
           <h1 className="text-2xl font-bold">
             LaunchPad <span className="brand-gradient-text">EIC</span>
           </h1>
@@ -183,7 +189,7 @@ function AuthPage() {
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
             <div className="h-px flex-1 bg-border" /> or <div className="h-px flex-1 bg-border" />
           </div>
-          <Tabs defaultValue="signin">
+          <Tabs defaultValue={mode === "signup" ? "signup" : "signin"}>
             <TabsList className="grid grid-cols-2 w-full mb-4">
               <TabsTrigger value="signin">Sign in</TabsTrigger>
               <TabsTrigger value="signup">Sign up</TabsTrigger>

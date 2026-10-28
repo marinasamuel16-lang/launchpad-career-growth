@@ -214,3 +214,55 @@
   background-clip: text;
   color: transparent;
 }
+
+/* ---- Landing page (src/routes/index.tsx) ----
+   Fonts are served from /fonts (OFL-licensed, from Fontsource) so no
+   visitor data goes to a font CDN. Anton matches the YouTube thumbnails. */
+@font-face {
+  font-family: "Anton";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/anton-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Instrument Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/instrument-sans-latin.woff2") format("woff2-variations"),
+    url("/fonts/instrument-sans-latin.woff2") format("woff2");
+}
+.landing-body {
+  font-family: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+}
+.landing-display {
+  font-family: "Anton", Impact, "Arial Narrow", sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.005em;
+}
+
+/* One entrance moment: the two headline blocks wipe in, like the YouTube
+   thumbnails. Everything else is still. Reduced motion is handled globally. */
+@keyframes landing-wipe {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+.landing-block {
+  animation: landing-wipe 520ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes landing-pop {
+  0% { transform: scale(0.4); }
+  70% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+.landing-pop {
+  animation: landing-pop 320ms ease-out both;
+}
+@keyframes landing-swap {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.landing-swap {
+  animation: landing-swap 220ms ease-out both;
+}

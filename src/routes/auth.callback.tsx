@@ -25,7 +25,7 @@ function AuthCallback() {
 
   useEffect(() => {
     (async () => {
-      let next: "/" | "/auth" = "/";
+      let next: "/today" | "/auth" = "/today";
       try {
         const url = new URL(window.location.href);
         const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
