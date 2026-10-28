@@ -152,7 +152,12 @@ async function main() {
   const eps = (await episodes()).filter((e) => !ONLY || e.id === ONLY);
   const have: { youtube_video_id: string }[] = await sb("playbooks?select=youtube_video_id&youtube_video_id=not.is.null");
   const done = new Set(have.map((h) => h.youtube_video_id));
-  const todo = eps.filter((e) => !done.has(e.id));
+  // Full episodes are titled "<Hook> | <Guest> | <Role> | Ep N". Shorts, clips and
+  // promos (dates or one-liners as titles) repeat an episode, so they're skipped.
+  const isEpisode = (t: string) => t.split("|").length >= 3;
+  const skipped = eps.filter((e) => !isEpisode(e.title)).map((e) => e.title);
+  if (skipped.length) console.log(`Skipping ${skipped.length} shorts/promos: ${skipped.join(" · ")}`);
+  const todo = eps.filter((e) => isEpisode(e.title) && !done.has(e.id));
   notice("Episodes", `${eps.length} on YouTube, ${done.size} already have a playbook, drafting ${todo.length}`);
 
   let made = 0;
