@@ -44,6 +44,11 @@ export type ChatOptions = {
   totalMs?: number;
   /** Longest one model gets before we give up on it and try the next. */
   perModelMs?: number;
+  /**
+   * A public YouTube video for the model to watch along with the first user
+   * message (Gemini only). Used to draft episode playbooks.
+   */
+  youtubeUrl?: string;
 };
 
 /**
@@ -124,7 +129,7 @@ function timeoutSignal(ms: number, outer?: AbortSignal): { signal: AbortSignal; 
 async function geminiChat(
   apiKey: string,
   messages: ChatMessage[],
-  { json, signal, totalMs = 40_000, perModelMs = 12_000 }: ChatOptions,
+  { json, signal, totalMs = 40_000, perModelMs = 12_000, youtubeUrl }: ChatOptions,
 ): Promise<string> {
   const system = messages
     .filter((m) => m.role === "system")
@@ -132,7 +137,10 @@ async function geminiChat(
     .join("\n\n");
 
   // Gemini wants turns that alternate user/model and start with the user.
-  const contents: { role: "user" | "model"; parts: { text: string }[] }[] = [];
+  type Part =
+    | { text: string }
+    | { fileData: { fileUri: string }; videoMetadata?: { fps: number } };
+  const contents: { role: "user" | "model"; parts: Part[] }[] = [];
   for (const m of messages) {
     if (m.role === "system" || !m.content) continue;
     const role = m.role === "assistant" ? "model" : "user";
@@ -143,13 +151,27 @@ async function geminiChat(
   if (contents[0]?.role === "model") contents.unshift({ role: "user", parts: [{ text: "Hi" }] });
   if (contents.length === 0) contents.push({ role: "user", parts: [{ text: "Hi" }] });
 
+  // A video goes in front of the first user message. Only the talking matters
+  // for our uses, so ask for few frames at low resolution: far fewer tokens,
+  // which keeps a 15-minute episode well inside the free allowance.
+  let videoTuning = Boolean(youtubeUrl);
+  const withVideo = () => {
+    if (!youtubeUrl) return contents;
+    const [first, ...rest] = contents;
+    const video: Part = videoTuning
+      ? { fileData: { fileUri: youtubeUrl }, videoMetadata: { fps: 0.25 } }
+      : { fileData: { fileUri: youtubeUrl } };
+    return [{ ...first, parts: [video, ...first.parts] }, ...rest];
+  };
+
   const bodyFor = (thinking: boolean) =>
     JSON.stringify({
       ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
-      contents,
+      contents: withVideo(),
       generationConfig: {
         ...(json ? { responseMimeType: "application/json" } : {}),
         ...(thinking ? { thinkingConfig: { thinkingLevel: "low" } } : {}),
+        ...(youtubeUrl && videoTuning ? { mediaResolution: "MEDIA_RESOLUTION_LOW" } : {}),
       },
     });
 
@@ -161,7 +183,7 @@ async function geminiChat(
     if (signal?.aborted) throw new AiError("Request cancelled", 499);
 
     let thinking = true;
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (let attempt = 0; attempt < 3; attempt++) {
       const t = timeoutSignal(Math.min(perModelMs, left), signal);
       const started = Date.now();
       try {
@@ -180,6 +202,11 @@ async function geminiChat(
           // A model that doesn't take the thinking setting: ask it again without.
           if (res.status === 400 && thinking && /thinking/i.test(detail)) {
             thinking = false;
+            continue;
+          }
+          // A model that doesn't take the frame-rate / resolution settings: ask again without.
+          if (res.status === 400 && videoTuning && /video_?metadata|fps|media_?resolution/i.test(detail)) {
+            videoTuning = false;
             continue;
           }
           if (TRY_NEXT_MODEL.has(res.status)) {

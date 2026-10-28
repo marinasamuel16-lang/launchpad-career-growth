@@ -18,13 +18,16 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedWatchRouteImport } from './routes/_authenticated/watch'
 import { Route as AuthenticatedTodayRouteImport } from './routes/_authenticated/today'
+import { Route as AuthenticatedReviewRouteImport } from './routes/_authenticated/review'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedCoachRouteImport } from './routes/_authenticated/coach'
 import { Route as AuthenticatedCareerRouteImport } from './routes/_authenticated/career'
 import { Route as ApiPublicStripeWebhookRouteImport } from './routes/api/public/stripe-webhook'
 import { Route as AuthenticatedSubscriptionSuccessRouteImport } from './routes/_authenticated/subscription.success'
+import { Route as AuthenticatedPlaybookIdRouteImport } from './routes/_authenticated/playbook.$id'
 import { Route as AuthenticatedAdminThemesRouteImport } from './routes/_authenticated/admin.themes'
+import { Route as AuthenticatedAdminExtrasRouteImport } from './routes/_authenticated/admin.extras'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -70,6 +73,11 @@ const AuthenticatedTodayRoute = AuthenticatedTodayRouteImport.update({
   path: '/today',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedReviewRoute = AuthenticatedReviewRouteImport.update({
+  id: '/review',
+  path: '/review',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -101,10 +109,21 @@ const AuthenticatedSubscriptionSuccessRoute =
     path: '/subscription/success',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedPlaybookIdRoute = AuthenticatedPlaybookIdRouteImport.update({
+  id: '/playbook/$id',
+  path: '/playbook/$id',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedAdminThemesRoute =
   AuthenticatedAdminThemesRouteImport.update({
     id: '/admin/themes',
     path: '/admin/themes',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAdminExtrasRoute =
+  AuthenticatedAdminExtrasRouteImport.update({
+    id: '/admin/extras',
+    path: '/admin/extras',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 
@@ -118,10 +137,13 @@ export interface FileRoutesByFullPath {
   '/coach': typeof AuthenticatedCoachRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/review': typeof AuthenticatedReviewRoute
   '/today': typeof AuthenticatedTodayRoute
   '/watch': typeof AuthenticatedWatchRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/admin/extras': typeof AuthenticatedAdminExtrasRoute
   '/admin/themes': typeof AuthenticatedAdminThemesRoute
+  '/playbook/$id': typeof AuthenticatedPlaybookIdRoute
   '/subscription/success': typeof AuthenticatedSubscriptionSuccessRoute
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
 }
@@ -134,11 +156,14 @@ export interface FileRoutesByTo {
   '/coach': typeof AuthenticatedCoachRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/review': typeof AuthenticatedReviewRoute
   '/today': typeof AuthenticatedTodayRoute
   '/watch': typeof AuthenticatedWatchRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/': typeof AuthenticatedIndexRoute
+  '/admin/extras': typeof AuthenticatedAdminExtrasRoute
   '/admin/themes': typeof AuthenticatedAdminThemesRoute
+  '/playbook/$id': typeof AuthenticatedPlaybookIdRoute
   '/subscription/success': typeof AuthenticatedSubscriptionSuccessRoute
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
 }
@@ -153,11 +178,14 @@ export interface FileRoutesById {
   '/_authenticated/coach': typeof AuthenticatedCoachRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/review': typeof AuthenticatedReviewRoute
   '/_authenticated/today': typeof AuthenticatedTodayRoute
   '/_authenticated/watch': typeof AuthenticatedWatchRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/admin/extras': typeof AuthenticatedAdminExtrasRoute
   '/_authenticated/admin/themes': typeof AuthenticatedAdminThemesRoute
+  '/_authenticated/playbook/$id': typeof AuthenticatedPlaybookIdRoute
   '/_authenticated/subscription/success': typeof AuthenticatedSubscriptionSuccessRoute
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
 }
@@ -173,10 +201,13 @@ export interface FileRouteTypes {
     | '/coach'
     | '/onboarding'
     | '/profile'
+    | '/review'
     | '/today'
     | '/watch'
     | '/auth/callback'
+    | '/admin/extras'
     | '/admin/themes'
+    | '/playbook/$id'
     | '/subscription/success'
     | '/api/public/stripe-webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -189,11 +220,14 @@ export interface FileRouteTypes {
     | '/coach'
     | '/onboarding'
     | '/profile'
+    | '/review'
     | '/today'
     | '/watch'
     | '/auth/callback'
     | '/'
+    | '/admin/extras'
     | '/admin/themes'
+    | '/playbook/$id'
     | '/subscription/success'
     | '/api/public/stripe-webhook'
   id:
@@ -207,11 +241,14 @@ export interface FileRouteTypes {
     | '/_authenticated/coach'
     | '/_authenticated/onboarding'
     | '/_authenticated/profile'
+    | '/_authenticated/review'
     | '/_authenticated/today'
     | '/_authenticated/watch'
     | '/auth/callback'
     | '/_authenticated/'
+    | '/_authenticated/admin/extras'
     | '/_authenticated/admin/themes'
+    | '/_authenticated/playbook/$id'
     | '/_authenticated/subscription/success'
     | '/api/public/stripe-webhook'
   fileRoutesById: FileRoutesById
@@ -290,6 +327,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTodayRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/review': {
+      id: '/_authenticated/review'
+      path: '/review'
+      fullPath: '/review'
+      preLoaderRoute: typeof AuthenticatedReviewRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/profile': {
       id: '/_authenticated/profile'
       path: '/profile'
@@ -332,11 +376,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSubscriptionSuccessRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/playbook/$id': {
+      id: '/_authenticated/playbook/$id'
+      path: '/playbook/$id'
+      fullPath: '/playbook/$id'
+      preLoaderRoute: typeof AuthenticatedPlaybookIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/admin/themes': {
       id: '/_authenticated/admin/themes'
       path: '/admin/themes'
       fullPath: '/admin/themes'
       preLoaderRoute: typeof AuthenticatedAdminThemesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admin/extras': {
+      id: '/_authenticated/admin/extras'
+      path: '/admin/extras'
+      fullPath: '/admin/extras'
+      preLoaderRoute: typeof AuthenticatedAdminExtrasRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
   }
@@ -347,10 +405,13 @@ interface AuthenticatedRouteChildren {
   AuthenticatedCoachRoute: typeof AuthenticatedCoachRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedReviewRoute: typeof AuthenticatedReviewRoute
   AuthenticatedTodayRoute: typeof AuthenticatedTodayRoute
   AuthenticatedWatchRoute: typeof AuthenticatedWatchRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedAdminExtrasRoute: typeof AuthenticatedAdminExtrasRoute
   AuthenticatedAdminThemesRoute: typeof AuthenticatedAdminThemesRoute
+  AuthenticatedPlaybookIdRoute: typeof AuthenticatedPlaybookIdRoute
   AuthenticatedSubscriptionSuccessRoute: typeof AuthenticatedSubscriptionSuccessRoute
 }
 
@@ -359,10 +420,13 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCoachRoute: AuthenticatedCoachRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedReviewRoute: AuthenticatedReviewRoute,
   AuthenticatedTodayRoute: AuthenticatedTodayRoute,
   AuthenticatedWatchRoute: AuthenticatedWatchRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedAdminExtrasRoute: AuthenticatedAdminExtrasRoute,
   AuthenticatedAdminThemesRoute: AuthenticatedAdminThemesRoute,
+  AuthenticatedPlaybookIdRoute: AuthenticatedPlaybookIdRoute,
   AuthenticatedSubscriptionSuccessRoute: AuthenticatedSubscriptionSuccessRoute,
 }
 

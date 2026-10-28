@@ -384,6 +384,8 @@ h1.headline { font: 800 clamp(28px, 7.4vw, 38px)/1.12 var(--body); letter-spacin
 .summary .ok { color: var(--ok); }
 .summary .pending { color: var(--warn); }
 .summary .bad { color: #ff8a96; }
+.summary .skip { color: var(--muted); font-weight: 600; }
+.summary .skip a { color: inherit; }
 
 /* ---------- Success ---------- */
 .success-hero { margin: 40px 0 10px; }

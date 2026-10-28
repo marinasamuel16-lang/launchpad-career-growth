@@ -5,7 +5,10 @@ no build step. Two kinds of guest invitation, both made from the admin
 (`/admin` → Create Invite):
 
 - **Leader Drop** — `/drop/<code>`: the leader records answers to three questions
-  on their own time (`index.html`, `assets/app.js`).
+  on their own time (`index.html`, `assets/app.js`), plus an optional bonus
+  question (set per invite; clear it to leave it out). Bonus answers are
+  published from the Career Hub (launchpadeic.app/admin/extras): members see
+  them first, then they unlock for everyone after the members-only window.
 - **Live interview** — `/live/<code>`: one page with the date and time (Eastern,
   plus the guest's own time zone), Apple / Google calendar buttons, their three
   questions, and a short bio / title / company / headshot form (`live.html`,

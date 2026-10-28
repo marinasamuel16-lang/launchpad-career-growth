@@ -1,0 +1,32 @@
+name: Draft playbooks
+
+# Has Gemini watch each YouTube episode that doesn't have a Playbook yet and
+# saves a DRAFT for Marina to review and publish at launchpadeic.app/admin/extras.
+# Safe to re-run: episodes that already have a playbook are skipped.
+# Runs when .github/draft-playbooks-trigger changes, or by hand.
+
+on:
+  push:
+    paths: [".github/draft-playbooks-trigger"]
+  workflow_dispatch:
+    inputs:
+      only_video:
+        description: "Just this YouTube video id (leave blank for all)"
+        required: false
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.1
+      - name: Draft missing playbooks
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_URL: https://yvebvsgixedduxicjisv.supabase.co
+          ONLY_VIDEO: ${{ github.event.inputs.only_video }}
+        run: bun scripts/draft-playbooks.ts

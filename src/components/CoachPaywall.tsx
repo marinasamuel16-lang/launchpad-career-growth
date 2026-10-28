@@ -6,24 +6,32 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { createCheckoutSession } from "@/lib/stripe.functions";
 
-const BENEFITS = [
+export const PREMIUM_BENEFITS = [
+  "Review Season Pack: your logged wins turned into a self-review, resume bullets and a LinkedIn post",
+  "A Playbook for every episode: the lessons, word-for-word scripts, and three moves for this week",
+  "Leaders' bonus answers, two weeks before everyone else",
   "Unlimited 1:1 chat with an AI coach that knows your roadmap",
-  "AI-generated career roadmaps, regenerated whenever your goal changes",
-  "Personalized weekly action steps toward your next role",
-  "Interview, promotion, and visibility coaching on demand",
+  "AI career roadmaps and personalized weekly steps toward your next role",
 ];
 
 type Props = {
   title?: string;
   subtitle?: string;
   className?: string;
+  /** Override or reorder the list, e.g. to lead with the feature the person just tapped. */
+  benefits?: string[];
+  /** Use "h2" when the paywall sits inside a page that already has its own h1. */
+  headingLevel?: "h1" | "h2";
 };
 
 export function CoachPaywall({
-  title = "Unlock AI Features",
-  subtitle = "Your personal AI coach and roadmap generator",
+  title = "Unlock LaunchPad Premium",
+  subtitle = "Everything that turns the show into your next move",
   className,
+  benefits = PREMIUM_BENEFITS,
+  headingLevel = "h1",
 }: Props) {
+  const Heading = headingLevel;
   const [loading, setLoading] = useState(false);
   const startCheckout = useServerFn(createCheckoutSession);
 
@@ -47,13 +55,13 @@ export function CoachPaywall({
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white/20 backdrop-blur">
             <Sparkles className="h-7 w-7" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+          <Heading className="text-2xl font-bold tracking-tight">{title}</Heading>
           <p className="mt-1 text-sm text-white/80">{subtitle}</p>
         </div>
 
         <div className="space-y-6 p-6">
           <ul className="space-y-3">
-            {BENEFITS.map((b) => (
+            {benefits.map((b) => (
               <li key={b} className="flex gap-3 text-sm">
                 <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
                   <Check className="h-3 w-3" />
@@ -89,7 +97,7 @@ export function CoachPaywall({
 
 
           <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground">
-            <Lock className="h-3 w-3" /> Secure billing. The feed, roadmap tracking, and videos stay free.
+            <Lock className="h-3 w-3" /> Secure billing. Your roadmap, check-ins and episodes stay free.
           </p>
         </div>
       </Card>
