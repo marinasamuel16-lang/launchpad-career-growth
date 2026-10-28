@@ -24,6 +24,11 @@ const OWNED_TABLES: { table: string; column: string }[] = [
   { table: "xp_events", column: "user_id" },
   { table: "subscriptions", column: "user_id" },
   { table: "ai_usage", column: "user_id" },
+  { table: "review_packs", column: "user_id" },
+  { table: "career_memory_entries", column: "user_id" },
+  { table: "daily_checkins", column: "user_id" },
+  { table: "career_goals", column: "user_id" },
+  { table: "career_actions", column: "user_id" },
 ];
 
 /**

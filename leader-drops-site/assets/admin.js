@@ -252,6 +252,7 @@
       `Q1: ${r.question_1}`, `Q2: ${r.question_2}`, `Q3: ${r.question_3}`,
       "",
       `ONE DROP: ${r.one_drop ? `“${r.one_drop}”` : "(video answer)"}`,
+      r.bonus_video_url ? `BONUS (members first): ${r.bonus_question || ""}` : null,
       "",
       `Submitted ${fmtDateTime(r.submission_timestamp)} · Status: ${r.status}`,
     ];
@@ -306,7 +307,17 @@
         ${r.one_drop_video_url ? `
           <div class="player" data-player="${esc(r.one_drop_video_url)}"><button class="btn btn-ghost btn-sm" type="button" data-load>▶ Load video</button></div>
           <div class="a-row"><button class="btn btn-ghost btn-sm" type="button" data-dl="${esc(r.one_drop_video_url)}" data-name="${slug(r.name)}-one-drop.${extOf(r.one_drop_video_url)}">Download original</button></div>` : ""}
-      </div>`;
+      </div>
+      ${r.bonus_video_url ? `
+      <div class="answer" id="ans-bonus">
+        <div class="qn">Bonus · members first</div>
+        <h3>${esc(r.bonus_question || "Bonus question")}</h3>
+        <div class="player" data-player="${esc(r.bonus_video_url)}"><button class="btn btn-ghost btn-sm" type="button" data-load>▶ Load video</button></div>
+        <div class="a-row">
+          <button class="btn btn-ghost btn-sm" type="button" data-dl="${esc(r.bonus_video_url)}" data-name="${slug(r.name)}-bonus.${extOf(r.bonus_video_url)}">Download original</button>
+          <a class="btn btn-text btn-sm" href="${esc((C.LINKS && C.LINKS.site) || "https://launchpadeic.app")}/admin/extras" target="_blank" rel="noopener">Publish to members →</a>
+        </div>
+      </div>` : ""}`;
     document.body.append(bg, d);
     document.body.style.overflow = "hidden";
     const onKey = (e) => { if (e.key === "Escape") closeDrawer(); };
@@ -323,6 +334,7 @@
     d.querySelector("[data-dlall]").onclick = async () => {
       const list = [[r.video_1_url, 1], [r.video_2_url, 2], [r.video_3_url, 3]].map(([p, n]) => [p, `${slug(r.name)}-q${n}.${extOf(p)}`]);
       if (r.one_drop_video_url) list.push([r.one_drop_video_url, `${slug(r.name)}-one-drop.${extOf(r.one_drop_video_url)}`]);
+      if (r.bonus_video_url) list.push([r.bonus_video_url, `${slug(r.name)}-bonus.${extOf(r.bonus_video_url)}`]);
       for (const [p, n] of list) { await download(p, n); await new Promise((res) => setTimeout(res, 700)); }
     };
     const loadPlayer = async (box) => {
@@ -369,6 +381,9 @@
     "What career advice do you disagree with — and what would you tell someone instead?",
     "If you were starting your career again tomorrow, what would you do differently?",
   ];
+  // Optional 4th question. Members of the Career Hub see the answer first, then
+  // it unlocks for everyone (published from the Career Hub admin → Premium extras).
+  const DEFAULT_BONUS = "What’s one unwritten rule of getting ahead that nobody told you early on?";
   // Live interview questions: same spirit as Frank Amoruso's (experience, people, one perspective).
   const LIVE_Q = [
     "Looking back on your career, what’s something you’ve come to understand through experience that you wish you had recognized much earlier?",
@@ -477,6 +492,7 @@ ${linkFor(inv)}
           <div class="field"><label for="c-meet">Meeting link <span class="opt">(optional, add it later if you don’t have it yet)</span></label><input class="input" id="c-meet" maxlength="500" inputmode="url" autocapitalize="off" placeholder="https://zoom.us/j/…" value="${v("meeting_url")}"></div>` : ""}
           <div class="fields" style="margin-top:0">
             ${QS.map((q, i) => `<div class="field"><label for="c-q${i}">Question ${i + 1}</label><textarea class="input qbox" id="c-q${i}" maxlength="300" rows="${live ? 3 : 2}">${esc((pf.questions && pf.questions[i]) || q)}</textarea></div>`).join("")}
+            ${live ? "" : `<div class="field"><label for="c-bonus">Bonus question <span class="opt">(optional for them · members see it first, everyone two weeks later · clear it to leave it out)</span></label><textarea class="input qbox" id="c-bonus" maxlength="300" rows="2">${esc(pf.bonus_question ?? DEFAULT_BONUS)}</textarea></div>`}
           </div>
           <div class="field-err" id="c-err" hidden></div>
           <div><button class="btn btn-primary" type="submit" id="c-go">${live ? "Create Live Invite" : "Create Invitation"}</button></div>
@@ -492,6 +508,7 @@ ${linkFor(inv)}
       const keep = {
         name: val("#c-name"), title: val("#c-title"), company: val("#c-company"), linkedin: val("#c-linkedin"),
         topic: val("#c-topic", pf.topic), date: val("#c-date", pf.date), time: val("#c-time", pf.time), meeting_url: val("#c-meet", pf.meeting_url),
+        bonus_question: val("#c-bonus", pf.bonus_question),
         leadId: pf.leadId, note: pf.note,
       };
       const cur = [0, 1, 2].map((i) => $(`#c-q${i}`).value.trim());
@@ -518,6 +535,8 @@ ${linkFor(inv)}
         question_1: qs[0], question_2: qs[1], question_3: qs[2],
         note: pf.note || null,
       };
+      if (!live) row.bonus_question = $("#c-bonus").value.trim() || null;
+      else row.bonus_question = null;
       if (live) {
         const date = $("#c-date").value, time = $("#c-time").value;
         if (date && !time) return fail("Add a time for that date (Eastern).");

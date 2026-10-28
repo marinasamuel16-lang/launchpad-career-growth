@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -11,6 +11,8 @@ import {
   BookMarked,
   AlertTriangle,
   X,
+  FileText,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -213,6 +215,23 @@ function CareerMemory() {
       </header>
 
       <main className="mx-auto max-w-2xl space-y-4 px-4 py-4">
+        {/* Review Season Pack */}
+        <Link
+          to="/review"
+          className="brand-gradient flex min-h-11 items-center gap-3 rounded-2xl p-4 text-white shadow-lg shadow-primary/20 transition-transform active:scale-[0.99]"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/20">
+            <FileText className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold">Review season is coming</span>
+            <span className="block text-xs text-white/85">
+              Turn {entries.length > 0 && !filtered ? `your ${entries.length} ${entries.length === 1 ? "entry" : "entries"}` : "what you log here"} into your self-review, resume bullets and a LinkedIn post.
+            </span>
+          </span>
+          <ChevronRight className="h-5 w-5 shrink-0" aria-hidden="true" />
+        </Link>
+
         {/* Search */}
         <div className="relative">
           <Search

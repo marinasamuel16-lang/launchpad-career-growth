@@ -27,10 +27,13 @@
     "Think: the move you'd make earlier, or the one you'd skip entirely.",
   ];
   const PERMISSION_TEXT =
-    "I give Launchpad EIC permission to edit, caption, excerpt, publish, and distribute the video responses I submitted across Launchpad EIC's website, YouTube, social media channels, newsletters, and promotional materials.";
+    "I give Launchpad EIC permission to edit, caption, excerpt, publish, and distribute the video responses I submitted across Launchpad EIC's website and app (including members-only areas), YouTube, social media channels, newsletters, and promotional materials.";
 
-  // Progress segments shown in the top bar (story style)
-  const SEGMENTS = ["q0", "q1", "q2", "drop", "about", "release"];
+  // Progress segments shown in the top bar (story style). The bonus question is
+  // optional and only there when the invitation asks one.
+  const hasBonus = () => !!(INVITE_DATA && INVITE_DATA.bonus_question);
+  const segments = () =>
+    hasBonus() ? ["q0", "q1", "q2", "drop", "bonus", "about", "release"] : ["q0", "q1", "q2", "drop", "about", "release"];
 
   // ---------- helpers ----------
   const $ = (sel, root = document) => root.querySelector(sel);
@@ -63,6 +66,8 @@
     step: "landing",
     answers: [null, null, null],          // {path,size,type,duration,source}
     drop: { mode: "text", text: "", video: null },
+    bonus: null,                          // optional bonus answer video, like answers[]
+    bonusSeen: false,                     // answered or skipped the bonus step
     about: { name: "", title: "", company: "", linkedin: "", bio: "", prefilled: false, headshot: null },
     permission: false,
     result: null,                         // {leader_id, first_name}
@@ -78,7 +83,7 @@
   let INVITE_DATA = null; // {leader_name, questions[], submitted}
 
   // ---------- upload manager ----------
-  // slot: q0 | q1 | q2 | drop | headshot
+  // slot: q0 | q1 | q2 | drop | bonus | headshot
   const U = {};
   const listeners = new Set();
   const emit = (slot) => listeners.forEach((fn) => fn(slot));
@@ -95,11 +100,13 @@
   function slotSaved(slot) {
     if (slot === "headshot") return S.about.headshot;
     if (slot === "drop") return S.drop.video;
+    if (slot === "bonus") return S.bonus;
     return S.answers[+slot.slice(1)];
   }
   function setSlotSaved(slot, val) {
     if (slot === "headshot") S.about.headshot = val;
     else if (slot === "drop") S.drop.video = val;
+    else if (slot === "bonus") S.bonus = val;
     else S.answers[+slot.slice(1)] = val;
     save();
   }
@@ -315,7 +322,13 @@
   // ---------- navigation ----------
   let cleanup = null;
   const main = $("#main");
-  const ORDER = ["landing", "tips", "q0", "q1", "q2", "drop", "about", "release", "success"];
+  const ORDER = ["landing", "tips", "q0", "q1", "q2", "drop", "bonus", "about", "release", "success"];
+  const prevStep = (step) => {
+    let pos = ORDER.indexOf(step) - 1;
+    if (ORDER[pos] === "bonus" && !hasBonus()) pos--;
+    return ORDER[Math.max(0, pos)];
+  };
+  const afterDrop = () => (hasBonus() ? "bonus" : "about");
 
   function go(step, push = true) {
     if (cleanup) { try { cleanup(); } catch (_) {} cleanup = null; }
@@ -333,14 +346,15 @@
   });
 
   function chrome(step) {
-    const idx = SEGMENTS.indexOf(step);
+    const SEG = segments();
+    const idx = SEG.indexOf(step);
     const seg = $("#segments");
     seg.hidden = idx < 0;
-    seg.innerHTML = SEGMENTS.map((s, i) => `<span class="${i < idx ? "done" : i === idx ? "now" : ""}"></span>`).join("");
+    seg.innerHTML = SEG.map((s, i) => `<span class="${i < idx ? "done" : i === idx ? "now" : ""}"></span>`).join("");
     const back = $("#back");
     const pos = ORDER.indexOf(step);
     back.hidden = !(pos > 0 && step !== "success");
-    back.onclick = () => history.length > 1 && history.state?.step ? history.back() : go(ORDER[pos - 1]);
+    back.onclick = () => history.length > 1 && history.state?.step ? history.back() : go(prevStep(step));
   }
 
   function toast(msg, ms = 3200) {
@@ -355,7 +369,7 @@
     chrome(step);
     const fn = {
       landing: screenLanding, tips: screenTips, q0: () => screenQuestion(0), q1: () => screenQuestion(1), q2: () => screenQuestion(2),
-      drop: screenDrop, about: screenAbout, release: screenRelease, success: screenSuccess,
+      drop: screenDrop, bonus: screenBonus, about: screenAbout, release: screenRelease, success: screenSuccess,
     }[step] || screenLanding;
     fn();
   }
@@ -393,7 +407,7 @@
       </section>`;
     $("#start").onclick = () => { markStarted(); go(hasProgress() ? resumeStep() : "tips"); };
   }
-  function hasProgress() { return S.answers.some(Boolean) || !!S.drop.text || !!S.drop.video || !!S.about.bio || !!S.about.headshot; }
+  function hasProgress() { return S.answers.some(Boolean) || !!S.drop.text || !!S.drop.video || !!S.bonus || !!S.about.bio || !!S.about.headshot; }
   let startedSent = false;
   function markStarted() {
     if (DEMO || startedSent || !sb || !INVITE) return;
@@ -403,6 +417,7 @@
   function resumeStep() {
     for (let i = 0; i < 3; i++) if (!S.answers[i]) return "q" + i;
     if (!S.drop.text && !S.drop.video) return "drop";
+    if (hasBonus() && !S.bonusSeen && !S.bonus) return "bonus";
     if (!aboutValid()) return "about";
     return "release";
   }
@@ -734,10 +749,35 @@
       const sync = () => { cnt.textContent = `${ta.value.length}/200`; btn.disabled = ta.value.trim().length < 3; };
       ta.oninput = () => { S.drop.text = ta.value; save(); sync(); };
       sync();
-      btn.onclick = () => { S.drop.text = ta.value.trim(); save(); go("about"); };
+      btn.onclick = () => { S.drop.text = ta.value.trim(); save(); go(afterDrop()); };
     } else {
-      cleanup = mountCapture(body, "drop", { onUse: () => go("about"), useLabel: "Continue" });
+      cleanup = mountCapture(body, "drop", { onUse: () => go(afterDrop()), useLabel: "Continue" });
     }
+  }
+
+  /* Optional bonus question. Members of the Career Hub see the answer first;
+     after two weeks it's shared with everyone, so it always gets seen. */
+  function screenBonus() {
+    const q = INVITE_DATA?.bonus_question || "";
+    main.innerHTML = `
+      <section class="screen">
+        <p class="eyebrow" style="margin-top:10px">Bonus round <span class="dim">/</span> <span>Optional</span></p>
+        <h1 class="question">“${esc(q)}”</h1>
+        <p class="hint">Got 60 more seconds? This one goes to members of the LaunchPad Career Hub first, then to everyone two weeks later — it always gets seen. Skip it if you’d rather.</p>
+        <div id="capture"></div>
+        <div class="center" style="margin-top:8px">
+          <button class="btn btn-text" id="skipBonus" type="button">Skip the bonus →</button>
+        </div>
+      </section>`;
+    cleanup = mountCapture($("#capture"), "bonus", {
+      onUse: () => { S.bonusSeen = true; save(); go("about"); },
+      useLabel: "Use This Answer",
+    });
+    $("#skipBonus").onclick = () => {
+      if (U.bonus || S.bonus) clearSlot("bonus");
+      S.bonusSeen = true; save();
+      go("about");
+    };
   }
 
   function aboutValid() {
@@ -865,6 +905,10 @@
       ? (S.drop.text.trim().length >= 3 ? "done" : "missing")
       : (du ? du.status : S.drop.video ? "done" : "missing");
     items.push({ label: "One Drop", st: dropSt, step: "drop" });
+    if (hasBonus()) {
+      const bu = U.bonus;
+      items.push({ label: "Bonus answer", st: bu ? bu.status : S.bonus ? "done" : "skipped", step: "bonus", optional: true });
+    }
     if (U.headshot) items.push({ label: "Headshot", st: U.headshot.status, step: "about", optional: true });
     items.push({ label: "Your details", st: aboutValid() ? "done" : "missing", step: "about" });
     if (S.about.bio.trim()) items.push({ label: "Bio", st: "done", step: "about", optional: true });
@@ -893,9 +937,9 @@
     const paint = () => {
       const items = checklist();
       $("#summary").innerHTML = items.map((it) => {
-        const map = { done: ["ok", "✓ Ready"], uploading: ["pending", `Uploading ${Math.floor(U[it.step === "about" ? "headshot" : it.step]?.pct || 0)}%`], error: ["bad", "Upload failed — fix"], missing: ["bad", "Missing — add"] };
+        const map = { done: ["ok", "✓ Ready"], uploading: ["pending", `Uploading ${Math.floor(U[it.step === "about" ? "headshot" : it.step]?.pct || 0)}%`], error: ["bad", "Upload failed — fix"], missing: ["bad", "Missing — add"], skipped: ["skip", "Skipped — add (optional)"] };
         const [cls, txt] = map[it.st] || map.missing;
-        const link = it.st === "error" || it.st === "missing";
+        const link = it.st === "error" || it.st === "missing" || it.st === "skipped";
         return `<div><span>${it.label}</span><span class="${cls}">${link ? `<a href="#" data-step="${it.step}">${txt}</a>` : txt}</span></div>`;
       }).join("");
       $("#summary").querySelectorAll("[data-step]").forEach((a) => (a.onclick = (e) => { e.preventDefault(); go(a.dataset.step); }));
@@ -932,6 +976,7 @@
       const failed = checklist().filter((it) => it.st === "error" && !it.optional);
       if (failed.length) throw new Error("An upload failed. Tap “Upload failed — fix” above to retry it.");
       if (U.headshot && U.headshot.status === "error") clearSlot("headshot");
+      if (U.bonus && U.bonus.status === "error") clearSlot("bonus");
 
       btn.innerHTML = `<span class="spinner" style="width:20px;height:20px;border-width:2px"></span> Submitting…`;
       const a = S.about;
@@ -944,6 +989,7 @@
         one_drop: S.drop.mode === "text" ? S.drop.text.trim() : null,
         one_drop_video_url: S.drop.mode === "video" ? S.drop.video?.path : null,
         headshot_url: a.headshot?.path || null,
+        bonus_video_url: hasBonus() && S.bonus?.path ? S.bonus.path : null,
         permission_granted: S.permission === true,
         permission_text: PERMISSION_TEXT,
       };
@@ -1083,7 +1129,7 @@
   async function boot() {
     if (DEMO) {
       const f = document.createElement("div"); f.className = "demo-flag"; f.textContent = "Demo mode · nothing is uploaded"; document.body.appendChild(f);
-      INVITE_DATA = { leader_name: "Michael Johnson", title: "President", company: "NJII", linkedin: "https://www.linkedin.com/in/example", questions: DEFAULT_QUESTIONS, submitted: false };
+      INVITE_DATA = { leader_name: "Michael Johnson", title: "President", company: "NJII", linkedin: "https://www.linkedin.com/in/example", questions: DEFAULT_QUESTIONS, bonus_question: "What's one unwritten rule of getting ahead that nobody told you early on?", submitted: false };
     } else {
       if (!UUID_RE.test(CODE) && !CODE_RE.test(CODE)) {
         screenState("This link is missing its code.", `Leader Drops links are personal. Open the exact link you were sent, or email <a href="mailto:${C.CONTACT_EMAIL}">${C.CONTACT_EMAIL}</a> and we’ll send a fresh one.`);

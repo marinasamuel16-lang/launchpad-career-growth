@@ -1,12 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Play, Youtube, Bell, Sparkles, Loader2 } from "lucide-react";
+import { Play, Youtube, Bell, Sparkles, Loader2, BookOpen, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { BottomNav } from "@/components/BottomNav";
 import { ActionsStrip } from "@/components/ActionsStrip";
+import { MemberBonuses } from "@/components/MemberBonuses";
+import { PlaybookShelf, usePlaybookTeasers } from "@/components/PlaybookShelf";
+import { usePremium } from "@/hooks/use-premium";
 import { getYoutubeVideos } from "@/lib/youtube.functions";
 
 const CHANNEL_URL = "https://youtube.com/@launchpadeic";
@@ -37,6 +40,11 @@ function Watch() {
   const featured = videos[0];
   const others = videos.slice(1);
 
+  // Which episodes have a Playbook, by YouTube video id.
+  const teasers = usePlaybookTeasers();
+  const { isPremium } = usePremium();
+  const playbookFor = new Map((teasers.data ?? []).filter((t) => t.youtube_video_id).map((t) => [t.youtube_video_id!, t.id]));
+
   return (
     <div className="min-h-screen pb-[calc(7rem+env(safe-area-inset-bottom))]">
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl">
@@ -54,6 +62,9 @@ function Watch() {
       </header>
       <ActionsStrip />
       <main className="mx-auto max-w-2xl px-4 py-4 space-y-5">
+        <PlaybookShelf />
+        <MemberBonuses />
+
         {videosQuery.isLoading && (
           <div className="flex justify-center py-8">
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -113,6 +124,9 @@ function Watch() {
                     <Youtube className="h-4 w-4" /> Watch on YouTube
                   </a>
                 </Button>
+                {playbookFor.has(featured.id) && (
+                  <PlaybookButton id={playbookFor.get(featured.id)!} locked={!isPremium} />
+                )}
               </div>
             </Card>
           </div>
@@ -148,6 +162,9 @@ function Watch() {
                       <Youtube className="h-3.5 w-3.5 text-red-500" /> Watch
                     </a>
                   </Button>
+                  {playbookFor.has(v.id) && (
+                    <PlaybookButton id={playbookFor.get(v.id)!} locked={!isPremium} small />
+                  )}
                 </div>
               </Card>
             ))}
@@ -170,5 +187,25 @@ function Watch() {
 
       <BottomNav />
     </div>
+  );
+}
+
+function PlaybookButton({ id, locked, small }: { id: string; locked: boolean; small?: boolean }) {
+  return (
+    <Button
+      size={small ? "sm" : "default"}
+      variant="outline"
+      className={small ? "w-full rounded-full gap-1.5 text-xs" : "w-full rounded-full gap-2"}
+      asChild
+    >
+      <Link to="/playbook/$id" params={{ id }}>
+        {locked ? (
+          <Lock className={small ? "h-3.5 w-3.5" : "h-4 w-4"} aria-hidden="true" />
+        ) : (
+          <BookOpen className={small ? "h-3.5 w-3.5 text-primary" : "h-4 w-4 text-primary"} aria-hidden="true" />
+        )}
+        Read the Playbook
+      </Link>
+    </Button>
   );
 }
