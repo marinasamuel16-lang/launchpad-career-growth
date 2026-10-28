@@ -63,7 +63,10 @@ function periodLabel(p: ReviewPeriod) {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
+  // A bare date (2026-01-01) is a calendar day, not a moment: read it as local
+  // midnight so it doesn't show as the day before west of UTC.
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(`${iso}T00:00:00`) : new Date(iso);
+  return d.toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -109,6 +112,7 @@ function ReviewSeason() {
     queryKey: ["review_readiness", user?.id],
     enabled: !!user,
     queryFn: () => readinessFn(),
+    retry: 1,
   });
 
   const packs = useQuery({
@@ -244,7 +248,11 @@ function ReviewSeason() {
                   >
                     <span className="block text-xs font-semibold">{p.label}</span>
                     <span className="block text-[11px] text-muted-foreground">
-                      {readiness.isLoading ? "…" : `${n ?? 0} logged`}
+                      {readiness.isLoading
+                        ? "…"
+                        : readiness.isError
+                          ? "Your entries"
+                          : `${n ?? 0} logged`}
                     </span>
                   </button>
                 );
@@ -270,7 +278,7 @@ function ReviewSeason() {
             />
           </div>
 
-          {!readiness.isLoading && !enough ? (
+          {readiness.isSuccess && !enough ? (
             <div className="space-y-3 rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4">
               <p className="text-sm">
                 You&apos;ve logged <strong>{count}</strong> {count === 1 ? "thing" : "things"} in
@@ -288,7 +296,7 @@ function ReviewSeason() {
             <Button
               className="brand-gradient h-12 w-full gap-2 rounded-full text-base font-semibold text-white"
               onClick={onBuild}
-              disabled={generate.isPending || readiness.isLoading || premiumLoading}
+              disabled={generate.isPending || readiness.isPending || premiumLoading}
             >
               {generate.isPending ? (
                 <>
