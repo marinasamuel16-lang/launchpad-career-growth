@@ -180,13 +180,14 @@ function Landing() {
             id="leaders-heading"
             className={`${DISPLAY} shrink-0 text-2xl leading-tight text-[#2A0D63] sm:text-3xl`}
           >
-            3 questions. 5 minutes.
+            Learn from leaders
             <br />
-            Years of experience.
+            who&apos;ve been there.
           </h2>
           <p className="max-w-[46ch] leading-relaxed text-[oklch(0.42_0.06_295)]">
-            Short episodes where working leaders answer the career questions nobody explains early
-            on. Watch them in the app, then turn what they said into your next move.
+            Some episodes are Leader Drops, where a leader records quick answers to a few career
+            questions. Others are full podcast interviews. Watch both in the app, then turn what
+            they said into your next move.
           </p>
         </div>
       </section>
