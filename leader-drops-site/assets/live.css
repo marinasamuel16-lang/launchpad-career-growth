@@ -156,6 +156,24 @@ h1.headline { font: 800 clamp(28px, 7.4vw, 38px)/1.12 var(--body); letter-spacin
   color: var(--ink-2); font-size: 15px;
 }
 
+/* Optional bonus question: answer goes to Career Hub members first. */
+.bonus {
+  margin-top: 12px; padding: 18px 20px 18px 22px; border-radius: var(--radius);
+  background:
+    linear-gradient(var(--surface), var(--surface)) padding-box,
+    linear-gradient(120deg, rgba(91, 52, 230, .75), rgba(194, 75, 210, .75)) border-box;
+  border: 1px solid transparent;
+}
+.bonus-tag {
+  margin: 0 0 10px; display: flex; align-items: center; gap: 10px;
+  font: 600 12px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+}
+.bonus-pill {
+  padding: 5px 9px; border-radius: 999px; background: var(--grad); color: #fff; letter-spacing: .14em;
+}
+.bonus-q { margin: 0; font: 700 18px/1.4 var(--body); letter-spacing: -.01em; text-wrap: pretty; }
+.bonus-note { margin: 10px 0 0; color: var(--ink-2); font-size: 14.5px; line-height: 1.5; }
+
 /* ---------- Notices ---------- */
 .notice {
   margin-top: 14px; padding: 13px 15px; border-radius: var(--radius-sm);

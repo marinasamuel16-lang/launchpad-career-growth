@@ -154,6 +154,7 @@
     const name = firstName(D.leader_name);
     const when = describeWhen(D.recording_at);
     const qs = (D.questions || []).filter(Boolean);
+    const bonus = String(D.bonus_question || "").trim();
     const ro = !!D.preview;
     const savedLine = D.saved_at
       ? "Saved " + new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(D.saved_at))
@@ -170,7 +171,7 @@
       <div class="promise">
         ${when ? `<div><strong>${esc(when.short)}</strong><span>${esc(when.time)}${when.local ? `<em>${esc(when.local)}</em>` : ""}</span></div>` : `<div><strong>Date</strong><span>We’ll confirm a time with you.</span></div>`}
         <div><strong>~${C.LENGTH_MIN} min</strong><span>Relaxed video conversation</span></div>
-        <div><strong>3 questions</strong><span>Below, so nothing catches you off guard</span></div>
+        <div><strong>3 questions</strong><span>${bonus ? "Plus one bonus. All below, so nothing catches you off guard" : "Below, so nothing catches you off guard"}</span></div>
       </div>
       <div class="when-actions">
         ${D.meeting_url ? `<a class="btn btn-primary btn-block" href="${esc(D.meeting_url)}" target="_blank" rel="noopener">${ICON.video} Join the Call</a>` : ""}
@@ -189,6 +190,11 @@
         <ol class="qlist">
           ${qs.map((q, i) => `<li><span class="qn">0${i + 1}</span><p>${esc(q)}</p></li>`).join("")}
         </ol>
+        ${bonus ? `<div class="bonus">
+          <p class="bonus-tag"><span class="bonus-pill">Bonus</span> Members first</p>
+          <p class="bonus-q">${esc(bonus)}</p>
+          <p class="bonus-note">We’ll close with this one. Your answer goes to LaunchPad Career Hub members first, then to everyone two weeks later. Skip it if you’d rather.</p>
+        </div>` : ""}
         <p class="prep-note">It’s a conversation, not a test. Follow-ups come naturally, and nothing is published until it’s edited.</p>
       </div>
 

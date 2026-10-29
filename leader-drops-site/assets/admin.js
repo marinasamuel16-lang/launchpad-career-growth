@@ -492,7 +492,9 @@ ${linkFor(inv)}
           <div class="field"><label for="c-meet">Meeting link <span class="opt">(optional, add it later if you don’t have it yet)</span></label><input class="input" id="c-meet" maxlength="500" inputmode="url" autocapitalize="off" placeholder="https://zoom.us/j/…" value="${v("meeting_url")}"></div>` : ""}
           <div class="fields" style="margin-top:0">
             ${QS.map((q, i) => `<div class="field"><label for="c-q${i}">Question ${i + 1}</label><textarea class="input qbox" id="c-q${i}" maxlength="300" rows="${live ? 3 : 2}">${esc((pf.questions && pf.questions[i]) || q)}</textarea></div>`).join("")}
-            ${live ? "" : `<div class="field"><label for="c-bonus">Bonus question <span class="opt">(optional for them · members see it first, everyone two weeks later · clear it to leave it out)</span></label><textarea class="input qbox" id="c-bonus" maxlength="300" rows="2">${esc(pf.bonus_question ?? DEFAULT_BONUS)}</textarea></div>`}
+            ${live
+              ? `<div class="field"><label for="c-bonus">Bonus question <span class="opt">(optional · shown on their page · ask it at the end of the call · members see the answer first, everyone two weeks later)</span></label><textarea class="input qbox" id="c-bonus" maxlength="300" rows="2" placeholder="${esc(DEFAULT_BONUS)}">${esc(pf.bonus_question ?? "")}</textarea></div>`
+              : `<div class="field"><label for="c-bonus">Bonus question <span class="opt">(optional for them · members see it first, everyone two weeks later · clear it to leave it out)</span></label><textarea class="input qbox" id="c-bonus" maxlength="300" rows="2">${esc(pf.bonus_question ?? DEFAULT_BONUS)}</textarea></div>`}
           </div>
           <div class="field-err" id="c-err" hidden></div>
           <div><button class="btn btn-primary" type="submit" id="c-go">${live ? "Create Live Invite" : "Create Invitation"}</button></div>
@@ -535,8 +537,7 @@ ${linkFor(inv)}
         question_1: qs[0], question_2: qs[1], question_3: qs[2],
         note: pf.note || null,
       };
-      if (!live) row.bonus_question = $("#c-bonus").value.trim() || null;
-      else row.bonus_question = null;
+      row.bonus_question = $("#c-bonus").value.trim() || null;
       if (live) {
         const date = $("#c-date").value, time = $("#c-time").value;
         if (date && !time) return fail("Add a time for that date (Eastern).");
@@ -618,6 +619,7 @@ ${linkFor(inv)}
         <div class="field"><label for="e-topic">Topic</label><input class="input" id="e-topic" maxlength="200" value="${esc(inv.topic || "")}"></div>
         <div class="field"><label for="e-meet">Meeting link</label><input class="input" id="e-meet" maxlength="500" inputmode="url" autocapitalize="off" placeholder="https://zoom.us/j/…" value="${esc(inv.meeting_url || "")}"></div>
         ${qs.map((q, i) => `<div class="field"><label for="e-q${i}">Question ${i + 1}</label><textarea class="input qbox" id="e-q${i}" maxlength="300" rows="3">${esc(q || "")}</textarea></div>`).join("")}
+        <div class="field"><label for="e-bonus">Bonus question <span class="opt">(optional · shown on their page · members see the answer first · clear it to leave it out)</span></label><textarea class="input qbox" id="e-bonus" maxlength="300" rows="2" placeholder="${esc(DEFAULT_BONUS)}">${esc(inv.bonus_question || "")}</textarea></div>
         <div class="field-err" id="e-err" hidden></div>
         <div class="a-row">
           <button class="btn btn-primary" type="submit" id="e-go">Save changes</button>
@@ -652,6 +654,7 @@ ${linkFor(inv)}
         leader_name: name, title: val("#e-title") || null, company: val("#e-company") || null, linkedin: linkedin || null,
         recording_at: date ? etToISO(date, time) : null, topic: val("#e-topic") || null, meeting_url: meet || null,
         question_1: qsNew[0], question_2: qsNew[1], question_3: qsNew[2],
+        bonus_question: val("#e-bonus") || null,
       };
       const btn = d.querySelector("#e-go"); btn.disabled = true; btn.textContent = "Saving…";
       if (!DEMO) {

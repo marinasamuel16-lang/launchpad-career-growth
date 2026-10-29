@@ -39,6 +39,8 @@ export type PlaybookTeaser = {
 export type MemberBonus = {
   id: string;
   leader_id: string | null;
+  /** Set when the bonus came from a live interview instead of a Leader Drop. */
+  invite_id?: string | null;
   youtube_video_id: string | null;
   guest_name: string;
   guest_role: string | null;

@@ -13,6 +13,10 @@ no build step. Two kinds of guest invitation, both made from the admin
   plus the guest's own time zone), Apple / Google calendar buttons, their three
   questions, and a short bio / title / company / headshot form (`live.html`,
   `assets/live.js`). Add `-preview` to the code to look without marking it opened.
+  A live interview can also carry an optional bonus question (Create Invite or
+  Invitations → Edit). It shows under their three questions, the host asks it at
+  the end of the call, and the clip is published members-first from
+  launchpadeic.app/admin/extras → Bonus answers.
   A live invite opened through a `/drop/` link moves to its `/live/` page.
 
 Admin (`/admin`): Live tab (guest leads → either kind of invite), Create Invite,

@@ -784,6 +784,32 @@ type DropWithBonus = {
   submission_timestamp: string;
 };
 
+type LiveWithBonus = {
+  id: string;
+  leader_name: string;
+  title: string | null;
+  company: string | null;
+  bonus_question: string | null;
+  recording_at: string | null;
+};
+
+/** One bonus answer to publish: from a Leader Drop (the leader recorded it) or a
+ *  live interview (the host asked it on the call; the clip is uploaded here). */
+type BonusSource = {
+  key: string;
+  kind: "drop" | "live";
+  leader_id: string | null;
+  invite_id: string | null;
+  name: string;
+  title: string | null;
+  company: string | null;
+  question: string;
+  originalVideo: string | null;
+  when: string | null;
+};
+
+const MAX_CLIP_MB = 50; // the leader-drops bucket's per-file limit
+
 function addDays(days: number) {
   return new Date(Date.now() + days * 86_400_000).toISOString();
 }
@@ -812,6 +838,20 @@ function BonusesAdmin() {
     },
   });
 
+  const lives = useQuery({
+    queryKey: ["admin_bonus_lives"],
+    queryFn: async (): Promise<LiveWithBonus[]> => {
+      const { data, error } = await sbp
+        .from("leader_drop_invites")
+        .select("id, leader_name, title, company, bonus_question, recording_at")
+        .eq("format", "live")
+        .not("bonus_question", "is", null)
+        .order("recording_at", { ascending: false, nullsFirst: false });
+      if (error) throw error;
+      return ((data ?? []) as LiveWithBonus[]).filter((l) => l.bonus_question?.trim());
+    },
+  });
+
   const bonuses = useQuery({
     queryKey: ["admin_member_bonuses"],
     queryFn: async (): Promise<MemberBonus[]> => {
@@ -827,38 +867,81 @@ function BonusesAdmin() {
   const byLeader = new Map(
     (bonuses.data ?? []).filter((b) => b.leader_id).map((b) => [b.leader_id!, b]),
   );
-  const list = drops.data ?? [];
+  const byInvite = new Map(
+    (bonuses.data ?? []).filter((b) => b.invite_id).map((b) => [b.invite_id!, b]),
+  );
+
+  const sources: BonusSource[] = [
+    ...(lives.data ?? []).map(
+      (l): BonusSource => ({
+        key: `live-${l.id}`,
+        kind: "live",
+        leader_id: null,
+        invite_id: l.id,
+        name: l.leader_name,
+        title: l.title,
+        company: l.company,
+        question: l.bonus_question!.trim(),
+        originalVideo: null,
+        when: l.recording_at,
+      }),
+    ),
+    ...(drops.data ?? []).map(
+      (d): BonusSource => ({
+        key: d.leader_id,
+        kind: "drop",
+        leader_id: d.leader_id,
+        invite_id: null,
+        name: d.name,
+        title: d.title,
+        company: d.company,
+        question: d.bonus_question ?? "Bonus question",
+        originalVideo: d.bonus_video_url,
+        when: d.submission_timestamp,
+      }),
+    ),
+  ].sort((a, b) => (b.when ?? "").localeCompare(a.when ?? ""));
+
+  const loading = drops.isLoading || lives.isLoading || bonuses.isLoading;
 
   return (
     <div className="space-y-4">
       <Card className="space-y-1 p-4 text-sm text-muted-foreground">
         <p>
-          Leader Drops now end with an optional bonus question. When a leader answers it, it shows
-          up here.
+          Leader Drops end with an optional bonus question, and live interviews can have one too
+          (set it on the Leader Drops admin when you create or edit the interview).
           <strong className="text-foreground"> Publish to members</strong> puts it on the Learn page
           for members first; after the members-only window it unlocks for everyone automatically, so
           every answer gets seen.
         </p>
-        <p>You can swap in an edited clip before or after publishing.</p>
+        <p>
+          For a live interview, cut the bonus answer from the recording and upload the clip here
+          (under {MAX_CLIP_MB} MB — 720p is plenty). For a Leader Drop you can swap in an edited
+          clip before or after publishing.
+        </p>
       </Card>
 
-      {(drops.isLoading || bonuses.isLoading) && (
-        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-      )}
-      {!drops.isLoading && list.length === 0 && (
+      {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+      {!loading && sources.length === 0 && (
         <Card className="p-6 text-center text-sm text-muted-foreground">
           No bonus answers yet. They&apos;ll appear here as leaders submit Leader Drops with the
-          bonus question.
+          bonus question, or when a live interview has one.
         </Card>
       )}
-      {list.map((d) => (
-        <BonusRow key={d.leader_id} drop={d} bonus={byLeader.get(d.leader_id) ?? null} />
+      {sources.map((src) => (
+        <BonusRow
+          key={src.key}
+          src={src}
+          bonus={
+            (src.leader_id ? byLeader.get(src.leader_id) : byInvite.get(src.invite_id!)) ?? null
+          }
+        />
       ))}
     </div>
   );
 }
 
-function BonusRow({ drop, bonus }: { drop: DropWithBonus; bonus: MemberBonus | null }) {
+function BonusRow({ src, bonus }: { src: BonusSource; bonus: MemberBonus | null }) {
   const qc = useQueryClient();
   const [days, setDays] = useState<number>(bonus?.members_only_days ?? 14);
   const [preview, setPreview] = useState<string | null>(null);
@@ -869,10 +952,14 @@ function BonusRow({ drop, bonus }: { drop: DropWithBonus; bonus: MemberBonus | n
     qc.invalidateQueries({ queryKey: ["member_bonuses"] });
   };
 
-  const videoPath = bonus?.video_path ?? drop.bonus_video_url!;
+  const videoPath = bonus?.video_path ?? src.originalVideo;
+  const live = src.kind === "live";
+  const sourceIds = { leader_id: src.leader_id, invite_id: src.invite_id };
+  const role = [src.title, src.company].filter(Boolean).join(", ") || null;
   const isPublic = !!bonus?.public_at && new Date(bonus.public_at) <= new Date();
 
   const showPreview = async () => {
+    if (!videoPath) return;
     const { data, error } = await sbp.storage.from("leader-drops").createSignedUrl(videoPath, 3600);
     if (error || !data?.signedUrl) return toast.error("Couldn't load the video.");
     setPreview(data.signedUrl);
@@ -881,11 +968,12 @@ function BonusRow({ drop, bonus }: { drop: DropWithBonus; bonus: MemberBonus | n
   const publish = useMutation({
     mutationFn: async () => {
       const now = new Date().toISOString();
+      if (!videoPath) throw new Error("Upload the bonus clip first.");
       const row = {
-        leader_id: drop.leader_id,
-        guest_name: drop.name,
-        guest_role: [drop.title, drop.company].filter(Boolean).join(", ") || null,
-        question: drop.bonus_question ?? "Bonus question",
+        ...sourceIds,
+        guest_name: src.name,
+        guest_role: role,
+        question: src.question,
         video_path: videoPath,
         members_only_days: days,
         published_at: now,
@@ -918,10 +1006,16 @@ function BonusRow({ drop, bonus }: { drop: DropWithBonus; bonus: MemberBonus | n
 
   const uploadClip = async (file: File) => {
     if (!file.type.startsWith("video/")) return toast.error("Pick a video file.");
+    if (file.size > MAX_CLIP_MB * 1024 * 1024) {
+      if (fileRef.current) fileRef.current.value = "";
+      return toast.error(
+        `That clip is ${(file.size / 1048576).toFixed(0)} MB. Export it under ${MAX_CLIP_MB} MB (720p is plenty) and try again.`,
+      );
+    }
     setUploading(true);
     try {
       const ext = (file.name.split(".").pop() || "mp4").toLowerCase().replace(/[^a-z0-9]/g, "");
-      const path = `bonus/${drop.leader_id}/edited-${Date.now()}.${ext}`;
+      const path = `bonus/${src.key}/edited-${Date.now()}.${ext}`;
       const { error } = await sbp.storage
         .from("leader-drops")
         .upload(path, file, { contentType: file.type, upsert: false });
@@ -934,17 +1028,17 @@ function BonusRow({ drop, bonus }: { drop: DropWithBonus; bonus: MemberBonus | n
         if (uErr) throw new Error(uErr.message);
       } else {
         const { error: iErr } = await sbp.from("member_bonuses").insert({
-          leader_id: drop.leader_id,
-          guest_name: drop.name,
-          guest_role: [drop.title, drop.company].filter(Boolean).join(", ") || null,
-          question: drop.bonus_question ?? "Bonus question",
+          ...sourceIds,
+          guest_name: src.name,
+          guest_role: role,
+          question: src.question,
           video_path: path,
           members_only_days: days,
         });
         if (iErr) throw new Error(iErr.message);
       }
       setPreview(null);
-      toast.success("Edited clip saved.");
+      toast.success(live ? "Clip saved. Preview it, then publish." : "Edited clip saved.");
       refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Upload failed.");
@@ -959,11 +1053,13 @@ function BonusRow({ drop, bonus }: { drop: DropWithBonus; bonus: MemberBonus | n
   return (
     <Card className="space-y-3 p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <p className="font-semibold">{drop.name}</p>
-        <span className="text-xs text-muted-foreground">
-          {drop.title}
-          {drop.company ? `, ${drop.company}` : ""}
-        </span>
+        <p className="font-semibold">{src.name}</p>
+        <span className="text-xs text-muted-foreground">{role}</span>
+        {live && (
+          <Badge variant="outline" className="rounded-full text-[10px]">
+            Live interview{src.when ? ` · ${shortDate(src.when)}` : ""}
+          </Badge>
+        )}
         {published ? (
           isPublic ? (
             <Badge variant="outline" className="rounded-full text-[10px]">
@@ -979,15 +1075,20 @@ function BonusRow({ drop, bonus }: { drop: DropWithBonus; bonus: MemberBonus | n
             Not published
           </Badge>
         )}
-        {bonus?.video_path?.startsWith("bonus/") && (
+        {!live && bonus?.video_path?.startsWith("bonus/") && (
           <Badge variant="outline" className="rounded-full text-[10px]">
             Edited clip
           </Badge>
         )}
       </div>
-      <p className="text-sm">&ldquo;{drop.bonus_question}&rdquo;</p>
+      <p className="text-sm">&ldquo;{src.question}&rdquo;</p>
 
-      {preview ? (
+      {!videoPath ? (
+        <p className="text-xs text-muted-foreground">
+          No clip yet. Cut {src.name.split(" ")[0]}&apos;s answer from the recording and upload it
+          below.
+        </p>
+      ) : preview ? (
         <video
           src={preview}
           controls
@@ -1004,14 +1105,11 @@ function BonusRow({ drop, bonus }: { drop: DropWithBonus; bonus: MemberBonus | n
         {!published && (
           <>
             <div className="space-y-1">
-              <Label
-                htmlFor={`days-${drop.leader_id}`}
-                className="text-[11px] text-muted-foreground"
-              >
+              <Label htmlFor={`days-${src.key}`} className="text-[11px] text-muted-foreground">
                 Members-only days
               </Label>
               <Input
-                id={`days-${drop.leader_id}`}
+                id={`days-${src.key}`}
                 type="number"
                 min={0}
                 max={90}
@@ -1022,7 +1120,7 @@ function BonusRow({ drop, bonus }: { drop: DropWithBonus; bonus: MemberBonus | n
             </div>
             <Button
               className="brand-gradient gap-1.5 rounded-full text-white"
-              disabled={publish.isPending}
+              disabled={publish.isPending || !videoPath}
               onClick={() => publish.mutate()}
             >
               {publish.isPending ? (
@@ -1072,7 +1170,7 @@ function BonusRow({ drop, bonus }: { drop: DropWithBonus; bonus: MemberBonus | n
           ) : (
             <Upload className="h-4 w-4" />
           )}
-          Use an edited clip
+          {live ? (videoPath ? "Replace the clip" : "Upload the clip") : "Use an edited clip"}
         </Button>
       </div>
     </Card>
