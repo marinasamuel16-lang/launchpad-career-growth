@@ -45,7 +45,10 @@ export type MemberBonus = {
   guest_name: string;
   guest_role: string | null;
   question: string;
-  video_path: string;
+  /** Uploaded clip in the private leader-drops bucket (null when it's a YouTube video). */
+  video_path: string | null;
+  /** 'youtube' = an unlisted YouTube video; its ID is kept in member_bonus_youtube (admins only). */
+  video_source?: "file" | "youtube";
   members_only_days: number;
   published_at: string | null;
   public_at: string | null;

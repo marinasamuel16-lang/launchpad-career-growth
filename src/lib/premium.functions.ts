@@ -347,15 +347,28 @@ export const getBonusVideoLink = createServerFn({ method: "POST" })
       .maybeSingle();
     if (error || !bonus) throw new Error("That bonus answer isn't available.");
 
+    // No public_at = members only, for good.
     const open = bonus.public_at && new Date(bonus.public_at) <= new Date();
     if (!open && !(await isPremium(db, userId))) throw new Error(PREMIUM_REQUIRED);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: signed, error: sErr } = await (supabaseAdmin as any).storage
+    const admin = supabaseAdmin as any;
+
+    // An unlisted YouTube video: its ID is only readable with the server key,
+    // so free accounts never see the link.
+    const { data: yt } = await admin
+      .from("member_bonus_youtube")
+      .select("youtube_id")
+      .eq("bonus_id", bonus.id)
+      .maybeSingle();
+    if (yt?.youtube_id) return { url: null, youtubeId: yt.youtube_id as string };
+
+    if (!bonus.video_path) throw new Error("This bonus answer doesn't have a video yet.");
+    const { data: signed, error: sErr } = await admin.storage
       .from("leader-drops")
       .createSignedUrl(bonus.video_path, 60 * 60);
     if (sErr || !signed?.signedUrl) throw new Error("Couldn't load the video. Please try again.");
-    return { url: signed.signedUrl as string };
+    return { url: signed.signedUrl as string, youtubeId: null };
   });
 
 /* ------------------------------------------------------------------ */
