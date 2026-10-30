@@ -816,6 +816,32 @@ function addDays(days: number) {
   return new Date(Date.now() + days * 86_400_000).toISOString();
 }
 
+function toLocalInput(d: Date) {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/** The coming Tuesday at 9:00 AM, local time (episodes go up on Tuesdays). */
+function nextTuesdayMorning(): string {
+  const now = new Date();
+  const t = new Date(now);
+  t.setHours(9, 0, 0, 0);
+  let add = (2 - now.getDay() + 7) % 7;
+  if (add === 0 && now >= t) add = 7;
+  t.setDate(t.getDate() + add);
+  return toLocalInput(t);
+}
+
+function whenLabel(iso: string) {
+  return new Date(iso).toLocaleString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 function shortDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, {
     month: "short",
@@ -1158,6 +1184,17 @@ function BonusRow({ src, bonus }: { src: BonusSource; bonus: MemberBonus | null 
   };
 
   const published = !!bonus?.published_at;
+  // Published with a future time = hidden from members until then; it shows up on its own.
+  const hidden = published && new Date(bonus!.published_at!) > new Date();
+  const [hideUntil, setHideUntil] = useState<string>(nextTuesdayMorning);
+
+  const hide = () => {
+    const when = new Date(hideUntil);
+    if (Number.isNaN(when.getTime()) || when <= new Date()) {
+      return toast.error("Pick a day and time in the future.");
+    }
+    patch.mutate({ published_at: when.toISOString() });
+  };
 
   return (
     <Card className="space-y-3 p-4">
@@ -1167,6 +1204,12 @@ function BonusRow({ src, bonus }: { src: BonusSource; bonus: MemberBonus | null 
         {live && (
           <Badge variant="outline" className="rounded-full text-[10px]">
             Live interview{src.when ? ` · ${shortDate(src.when)}` : ""}
+          </Badge>
+        )}
+        {hidden && (
+          <Badge variant="outline" className="gap-1 rounded-full text-[10px]">
+            <EyeOff className="h-3 w-3" /> Hidden from members until{" "}
+            {whenLabel(bonus!.published_at!)}
           </Badge>
         )}
         {published ? (
@@ -1334,6 +1377,40 @@ function BonusRow({ src, bonus }: { src: BonusSource; bonus: MemberBonus | null 
               Publish to members
             </Button>
           </>
+        )}
+        {published && !hidden && (
+          <>
+            <div className="space-y-1">
+              <Label htmlFor={`hide-${src.key}`} className="text-[11px] text-muted-foreground">
+                Hide from members until
+              </Label>
+              <Input
+                id={`hide-${src.key}`}
+                type="datetime-local"
+                value={hideUntil}
+                onChange={(e) => setHideUntil(e.target.value)}
+                className="h-9 w-[13.5rem]"
+              />
+            </div>
+            <Button
+              variant="outline"
+              className="gap-1.5 rounded-full"
+              disabled={patch.isPending || !hideUntil}
+              onClick={hide}
+            >
+              <EyeOff className="h-4 w-4" /> Hide until then
+            </Button>
+          </>
+        )}
+        {hidden && (
+          <Button
+            variant="outline"
+            className="gap-1.5 rounded-full"
+            disabled={patch.isPending}
+            onClick={() => patch.mutate({ published_at: new Date().toISOString() })}
+          >
+            <Eye className="h-4 w-4" /> Show to members now
+          </Button>
         )}
         {published && !isPublic && bonus?.public_at && (
           <Button
