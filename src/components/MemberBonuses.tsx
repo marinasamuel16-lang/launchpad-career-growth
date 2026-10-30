@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Gem, Loader2, Lock, Play, Unlock } from "lucide-react";
+import { EyeOff, Gem, Loader2, Lock, Play, Unlock } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -143,6 +143,19 @@ function BonusCard({
             {bonus.guest_name}
             {bonus.guest_role ? ` · ${bonus.guest_role}` : ""}
           </span>
+          {/* Only admins ever receive a bonus that's still hidden (the database hides it from everyone else). */}
+          {bonus.published_at && new Date(bonus.published_at) > new Date() && (
+            <Badge variant="outline" className="gap-1 rounded-full text-[10px]">
+              <EyeOff className="h-3 w-3" aria-hidden="true" /> Admin view · members see it{" "}
+              {new Date(bonus.published_at).toLocaleString(undefined, {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+            </Badge>
+          )}
         </div>
         <p className="font-semibold leading-snug">&ldquo;{bonus.question}&rdquo;</p>
         {!playing && (
