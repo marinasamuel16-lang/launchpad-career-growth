@@ -10,14 +10,17 @@ import { PremiumDialog } from "@/components/PremiumDialog";
 import { usePremium } from "@/hooks/use-premium";
 import { sbp, type MemberBonus } from "@/integrations/supabase/premium-types";
 import { getBonusVideoLink, PREMIUM_REQUIRED } from "@/lib/premium.functions";
+import { youtubeEmbedUrl } from "@/lib/youtube-id";
 
 function shortDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 /**
- * Leaders' bonus answers. Members watch first; once public_at passes, everyone
- * can. Renders nothing until there is at least one.
+ * Leaders' bonus answers. Members can watch; once public_at passes, everyone
+ * can (no public_at = members only, for good). The video is an uploaded clip or
+ * an unlisted YouTube video; either way the server only hands it to members.
+ * Renders nothing until there is at least one.
  */
 export function MemberBonuses() {
   const { isPremium } = usePremium();
@@ -50,7 +53,7 @@ export function MemberBonuses() {
         <h2 id="bonus-heading" className="text-sm font-semibold">
           Bonus answers
         </h2>
-        <span className="text-xs text-muted-foreground">· members first</span>
+        <span className="text-xs text-muted-foreground">· for members</span>
       </div>
       <div className="space-y-3">
         {list.map((b) => (
@@ -60,8 +63,8 @@ export function MemberBonuses() {
       <PremiumDialog
         open={paywall}
         onOpenChange={setPaywall}
-        title="Watch it before everyone else"
-        subtitle="Members get every leader's bonus answer two weeks early — plus Playbooks and your Review Season Pack."
+        title="Bonus answers are for members"
+        subtitle="Members get every leader's bonus answer — plus Playbooks and your Review Season Pack."
       />
     </section>
   );
@@ -78,17 +81,21 @@ function BonusCard({
 }) {
   const getLink = useServerFn(getBonusVideoLink);
   const [url, setUrl] = useState<string | null>(null);
+  const [youtubeId, setYoutubeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const isPublic = !!bonus.public_at && new Date(bonus.public_at) <= new Date();
+  const membersOnly = !bonus.public_at;
   const canWatch = isPremium || isPublic;
+  const playing = !!(url || youtubeId);
 
   const play = async () => {
     if (!canWatch) return onLocked();
     setLoading(true);
     try {
       const res = await getLink({ data: { id: bonus.id } });
-      setUrl(res.url);
+      setYoutubeId(res.youtubeId ?? null);
+      setUrl(res.url ?? null);
     } catch (e) {
       if (e instanceof Error && e.message === PREMIUM_REQUIRED) onLocked();
       else toast.error(e instanceof Error ? e.message : "Couldn't load the video.");
@@ -99,7 +106,18 @@ function BonusCard({
 
   return (
     <Card className="overflow-hidden">
-      {url ? (
+      {youtubeId ? (
+        <div className="aspect-video w-full bg-black">
+          <iframe
+            src={youtubeEmbedUrl(youtubeId)}
+            title={`${bonus.guest_name} answers: ${bonus.question}`}
+            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+            className="h-full w-full border-0"
+          />
+        </div>
+      ) : url ? (
         <video
           src={url}
           controls
@@ -117,7 +135,8 @@ function BonusCard({
             </Badge>
           ) : (
             <Badge className="brand-gradient gap-1 rounded-full border-0 text-[10px] text-white">
-              <Gem className="h-3 w-3" aria-hidden="true" /> Members first
+              <Gem className="h-3 w-3" aria-hidden="true" />{" "}
+              {membersOnly ? "Members only" : "Members first"}
             </Badge>
           )}
           <span className="text-xs text-muted-foreground">
@@ -126,7 +145,7 @@ function BonusCard({
           </span>
         </div>
         <p className="font-semibold leading-snug">&ldquo;{bonus.question}&rdquo;</p>
-        {!url && (
+        {!playing && (
           <Button
             className={
               canWatch

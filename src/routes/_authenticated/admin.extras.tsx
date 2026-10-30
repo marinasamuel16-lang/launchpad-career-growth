@@ -18,6 +18,7 @@ import {
   Upload,
   Wand2,
   X,
+  Youtube,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +39,7 @@ import { guestFromEpisodeTitle, type PlaybookContent } from "@/lib/playbook-prom
 import { draftPlaybookFn } from "@/lib/premium.functions";
 import { getYoutubeVideos, type YoutubeVideo } from "@/lib/youtube.functions";
 import { cn } from "@/lib/utils";
+import { parseYoutubeId, youtubeEmbedUrl } from "@/lib/youtube-id";
 
 export const Route = createFileRoute("/_authenticated/admin/extras")({
   component: AdminExtras,
@@ -910,14 +912,18 @@ function BonusesAdmin() {
         <p>
           Leader Drops end with an optional bonus question, and live interviews can have one too
           (set it on the Leader Drops admin when you create or edit the interview).
-          <strong className="text-foreground"> Publish to members</strong> puts it on the Learn page
-          for members first; after the members-only window it unlocks for everyone automatically, so
-          every answer gets seen.
+          <strong className="text-foreground"> Publish to members</strong> puts it on the Learn
+          page. Choose <strong className="text-foreground">Members only</strong> to keep it locked
+          to paying members for good, or{" "}
+          <strong className="text-foreground">Members first, then free</strong> to unlock it for
+          everyone after a set number of days.
         </p>
         <p>
-          For a live interview, cut the bonus answer from the recording and upload the clip here
-          (under {MAX_CLIP_MB} MB — 720p is plenty). For a Leader Drop you can swap in an edited
-          clip before or after publishing.
+          The easiest way to add the video: upload it to YouTube as{" "}
+          <strong className="text-foreground">Unlisted</strong> (it won&apos;t show on the channel
+          or in search) and paste the link here. Members watch it inside the Career Hub; free
+          accounts never get the link. You can also upload a clip instead (under {MAX_CLIP_MB} MB).
+          For a Leader Drop you can swap in an edited clip before or after publishing.
         </p>
       </Card>
 
@@ -944,16 +950,43 @@ function BonusesAdmin() {
 function BonusRow({ src, bonus }: { src: BonusSource; bonus: MemberBonus | null }) {
   const qc = useQueryClient();
   const [days, setDays] = useState<number>(bonus?.members_only_days ?? 14);
+  // Who can watch once it's published: members only (never unlocks), or members
+  // first and then everyone after `days`.
+  const [access, setAccess] = useState<"members" | "window">(
+    bonus?.published_at && bonus.public_at ? "window" : "members",
+  );
   const [preview, setPreview] = useState<string | null>(null);
+  const [ytPreview, setYtPreview] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [ytInput, setYtInput] = useState("");
+  const [savingYt, setSavingYt] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ["admin_member_bonuses"] });
+    qc.invalidateQueries({ queryKey: ["admin_bonus_youtube"] });
     qc.invalidateQueries({ queryKey: ["member_bonuses"] });
   };
 
+  // The unlisted YouTube video, if one is set (admins only can read this).
+  const yt = useQuery({
+    queryKey: ["admin_bonus_youtube", bonus?.id ?? null],
+    enabled: !!bonus?.id,
+    queryFn: async (): Promise<string | null> => {
+      const { data, error } = await sbp
+        .from("member_bonus_youtube")
+        .select("youtube_id")
+        .eq("bonus_id", bonus!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return (data?.youtube_id as string | undefined) ?? null;
+    },
+  });
+  const youtubeId = bonus ? (yt.data ?? null) : null;
+
   const videoPath = bonus?.video_path ?? src.originalVideo;
+  const hasVideo = !!youtubeId || !!videoPath;
   const live = src.kind === "live";
+  const first = src.name.split(" ")[0];
   const sourceIds = { leader_id: src.leader_id, invite_id: src.invite_id };
   const role = [src.title, src.company].filter(Boolean).join(", ") || null;
   const isPublic = !!bonus?.public_at && new Date(bonus.public_at) <= new Date();
@@ -968,16 +1001,17 @@ function BonusRow({ src, bonus }: { src: BonusSource; bonus: MemberBonus | null 
   const publish = useMutation({
     mutationFn: async () => {
       const now = new Date().toISOString();
-      if (!videoPath) throw new Error("Upload the bonus clip first.");
+      if (!hasVideo) throw new Error("Add the YouTube link (or upload the clip) first.");
       const row = {
         ...sourceIds,
         guest_name: src.name,
         guest_role: role,
         question: src.question,
-        video_path: videoPath,
+        video_path: videoPath ?? null,
+        video_source: youtubeId ? "youtube" : "file",
         members_only_days: days,
         published_at: now,
-        public_at: addDays(days),
+        public_at: access === "members" ? null : addDays(days),
       };
       const { error } = bonus
         ? await sbp.from("member_bonuses").update(row).eq("id", bonus.id)
@@ -985,7 +1019,11 @@ function BonusRow({ src, bonus }: { src: BonusSource; bonus: MemberBonus | null 
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
-      toast.success(`Published. Members first; free for everyone on ${shortDate(addDays(days))}.`);
+      toast.success(
+        access === "members"
+          ? "Published. Only members can watch it."
+          : `Published. Members first; free for everyone on ${shortDate(addDays(days))}.`,
+      );
       refresh();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -1003,6 +1041,73 @@ function BonusRow({ src, bonus }: { src: BonusSource; bonus: MemberBonus | null 
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  /** Use an unlisted YouTube video as the bonus answer (replaces any clip). */
+  const saveYoutube = async () => {
+    const id = parseYoutubeId(ytInput);
+    if (!id) {
+      return toast.error(
+        "That doesn't look like a YouTube link. In YouTube, tap Share → Copy link and paste it here.",
+      );
+    }
+    setSavingYt(true);
+    try {
+      let bonusId = bonus?.id;
+      if (!bonusId) {
+        const { data, error } = await sbp
+          .from("member_bonuses")
+          .insert({
+            ...sourceIds,
+            guest_name: src.name,
+            guest_role: role,
+            question: src.question,
+            video_path: src.originalVideo,
+            video_source: "youtube",
+            members_only_days: days,
+          })
+          .select("id")
+          .single();
+        if (error) throw new Error(error.message);
+        bonusId = data.id as string;
+      } else {
+        const { error } = await sbp
+          .from("member_bonuses")
+          .update({ video_source: "youtube" })
+          .eq("id", bonusId);
+        if (error) throw new Error(error.message);
+      }
+      const { error: yErr } = await sbp
+        .from("member_bonus_youtube")
+        .upsert({ bonus_id: bonusId, youtube_id: id, updated_at: new Date().toISOString() });
+      if (yErr) throw new Error(yErr.message);
+      setYtInput("");
+      setYtPreview(false);
+      setPreview(null);
+      toast.success(
+        bonus?.published_at ? "Video swapped." : "YouTube video saved. Preview it, then publish.",
+      );
+      refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't save the link.");
+    } finally {
+      setSavingYt(false);
+    }
+  };
+
+  const removeYoutube = async () => {
+    if (!bonus) return;
+    if (bonus.published_at && !videoPath) {
+      return toast.error(
+        "It's published and this is its only video. Paste a different link, or unpublish first.",
+      );
+    }
+    const { error } = await sbp.from("member_bonus_youtube").delete().eq("bonus_id", bonus.id);
+    if (error) return toast.error(error.message);
+    await sbp.from("member_bonuses").update({ video_source: "file" }).eq("id", bonus.id);
+    setYtPreview(false);
+    toast.success("YouTube video removed.");
+    refresh();
+  };
 
   const uploadClip = async (file: File) => {
     if (!file.type.startsWith("video/")) return toast.error("Pick a video file.");
@@ -1023,9 +1128,11 @@ function BonusRow({ src, bonus }: { src: BonusSource; bonus: MemberBonus | null 
       if (bonus) {
         const { error: uErr } = await sbp
           .from("member_bonuses")
-          .update({ video_path: path })
+          .update({ video_path: path, video_source: "file" })
           .eq("id", bonus.id);
         if (uErr) throw new Error(uErr.message);
+        // The newest video wins: an uploaded clip replaces the YouTube one.
+        if (youtubeId) await sbp.from("member_bonus_youtube").delete().eq("bonus_id", bonus.id);
       } else {
         const { error: iErr } = await sbp.from("member_bonuses").insert({
           ...sourceIds,
@@ -1033,11 +1140,13 @@ function BonusRow({ src, bonus }: { src: BonusSource; bonus: MemberBonus | null 
           guest_role: role,
           question: src.question,
           video_path: path,
+          video_source: "file",
           members_only_days: days,
         });
         if (iErr) throw new Error(iErr.message);
       }
       setPreview(null);
+      setYtPreview(false);
       toast.success(live ? "Clip saved. Preview it, then publish." : "Edited clip saved.");
       refresh();
     } catch (e) {
@@ -1067,7 +1176,7 @@ function BonusRow({ src, bonus }: { src: BonusSource; bonus: MemberBonus | null 
             </Badge>
           ) : (
             <Badge className="brand-gradient rounded-full border-0 text-[10px] text-white">
-              Members until {shortDate(bonus!.public_at!)}
+              {bonus!.public_at ? `Members until ${shortDate(bonus!.public_at)}` : "Members only"}
             </Badge>
           )
         ) : (
@@ -1075,19 +1184,48 @@ function BonusRow({ src, bonus }: { src: BonusSource; bonus: MemberBonus | null 
             Not published
           </Badge>
         )}
-        {!live && bonus?.video_path?.startsWith("bonus/") && (
-          <Badge variant="outline" className="rounded-full text-[10px]">
-            Edited clip
+        {youtubeId ? (
+          <Badge variant="outline" className="gap-1 rounded-full text-[10px]">
+            <Youtube className="h-3 w-3" /> YouTube (unlisted)
           </Badge>
+        ) : (
+          !live &&
+          bonus?.video_path?.startsWith("bonus/") && (
+            <Badge variant="outline" className="rounded-full text-[10px]">
+              Edited clip
+            </Badge>
+          )
         )}
       </div>
       <p className="text-sm">&ldquo;{src.question}&rdquo;</p>
 
-      {!videoPath ? (
+      {!hasVideo ? (
         <p className="text-xs text-muted-foreground">
-          No clip yet. Cut {src.name.split(" ")[0]}&apos;s answer from the recording and upload it
-          below.
+          No video yet. Upload {first}&apos;s answer to YouTube as <strong>Unlisted</strong> and
+          paste the link below, or upload the clip.
         </p>
+      ) : youtubeId ? (
+        ytPreview ? (
+          <div className="aspect-video w-full overflow-hidden rounded-lg bg-black">
+            <iframe
+              src={youtubeEmbedUrl(youtubeId, false)}
+              title={`Preview: ${src.name}'s bonus answer`}
+              allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+              allowFullScreen
+              referrerPolicy="strict-origin-when-cross-origin"
+              className="h-full w-full border-0"
+            />
+          </div>
+        ) : (
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5 rounded-full"
+            onClick={() => setYtPreview(true)}
+          >
+            <Eye className="h-3.5 w-3.5" /> Preview
+          </Button>
+        )
       ) : preview ? (
         <video
           src={preview}
@@ -1101,26 +1239,91 @@ function BonusRow({ src, bonus }: { src: BonusSource; bonus: MemberBonus | null 
         </Button>
       )}
 
+      <div className="space-y-1.5">
+        <Label htmlFor={`yt-${src.key}`} className="text-[11px] text-muted-foreground">
+          YouTube link (set the video to Unlisted on YouTube)
+        </Label>
+        <div className="flex gap-2">
+          <Input
+            id={`yt-${src.key}`}
+            inputMode="url"
+            placeholder={
+              youtubeId ? "Paste a different link to swap the video" : "https://youtu.be/…"
+            }
+            value={ytInput}
+            onChange={(e) => setYtInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && ytInput.trim() && saveYoutube()}
+            className="h-9"
+          />
+          <Button
+            variant="outline"
+            className="h-9 shrink-0 gap-1.5 rounded-full"
+            disabled={savingYt || !ytInput.trim()}
+            onClick={saveYoutube}
+          >
+            {savingYt ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Youtube className="h-4 w-4" />
+            )}
+            {youtubeId ? "Swap" : "Use this video"}
+          </Button>
+        </div>
+        {youtubeId && (
+          <p className="text-[11px] text-muted-foreground">
+            Members watch it inside the Career Hub; free accounts never get the link.{" "}
+            <button type="button" className="underline underline-offset-2" onClick={removeYoutube}>
+              Remove
+            </button>
+          </p>
+        )}
+      </div>
+
       <div className="flex flex-wrap items-end gap-2 border-t border-border/60 pt-3">
         {!published && (
           <>
             <div className="space-y-1">
-              <Label htmlFor={`days-${src.key}`} className="text-[11px] text-muted-foreground">
-                Members-only days
-              </Label>
-              <Input
-                id={`days-${src.key}`}
-                type="number"
-                min={0}
-                max={90}
-                value={days}
-                onChange={(e) => setDays(Math.max(0, Math.min(90, Number(e.target.value) || 0)))}
-                className="h-9 w-24"
-              />
+              <Label className="text-[11px] text-muted-foreground">Who can watch</Label>
+              <div className="flex gap-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={access === "members" ? "default" : "outline"}
+                  className="h-9 rounded-full"
+                  onClick={() => setAccess("members")}
+                >
+                  Members only
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={access === "window" ? "default" : "outline"}
+                  className="h-9 rounded-full"
+                  onClick={() => setAccess("window")}
+                >
+                  Members first, then free
+                </Button>
+              </div>
             </div>
+            {access === "window" && (
+              <div className="space-y-1">
+                <Label htmlFor={`days-${src.key}`} className="text-[11px] text-muted-foreground">
+                  Members-only days
+                </Label>
+                <Input
+                  id={`days-${src.key}`}
+                  type="number"
+                  min={0}
+                  max={90}
+                  value={days}
+                  onChange={(e) => setDays(Math.max(0, Math.min(90, Number(e.target.value) || 0)))}
+                  className="h-9 w-24"
+                />
+              </div>
+            )}
             <Button
               className="brand-gradient gap-1.5 rounded-full text-white"
-              disabled={publish.isPending || !videoPath}
+              disabled={publish.isPending || !hasVideo}
               onClick={() => publish.mutate()}
             >
               {publish.isPending ? (
@@ -1131,6 +1334,16 @@ function BonusRow({ src, bonus }: { src: BonusSource; bonus: MemberBonus | null 
               Publish to members
             </Button>
           </>
+        )}
+        {published && !isPublic && bonus?.public_at && (
+          <Button
+            variant="outline"
+            className="gap-1.5 rounded-full"
+            disabled={patch.isPending}
+            onClick={() => patch.mutate({ public_at: null })}
+          >
+            <Gem className="h-4 w-4" /> Keep it members-only
+          </Button>
         )}
         {published && !isPublic && (
           <Button
@@ -1170,7 +1383,11 @@ function BonusRow({ src, bonus }: { src: BonusSource; bonus: MemberBonus | null 
           ) : (
             <Upload className="h-4 w-4" />
           )}
-          {live ? (videoPath ? "Replace the clip" : "Upload the clip") : "Use an edited clip"}
+          {live
+            ? videoPath && !youtubeId
+              ? "Replace the clip"
+              : "Upload a clip instead"
+            : "Use an edited clip"}
         </Button>
       </div>
     </Card>
