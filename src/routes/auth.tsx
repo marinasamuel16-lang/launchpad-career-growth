@@ -71,7 +71,7 @@ function AuthPage() {
       return;
     }
     if (!agreed) {
-      setSignUpErrors({ terms: "Please confirm the AI disclaimer and agree to the Terms and Privacy Policy." });
+      setSignUpErrors({ terms: "Please confirm you're 18 or older, the AI disclaimer, and that you agree to the Terms and Privacy Policy." });
       return;
     }
     setSignUpErrors({});
@@ -180,7 +180,7 @@ function AuthPage() {
             Continue with Google
           </Button>
           <p className="text-center text-[11px] leading-snug text-muted-foreground">
-            By continuing with Google you agree to our{" "}
+            By continuing with Google you confirm you're 18 or older and agree to our{" "}
             <Link to="/terms" target="_blank" className="text-primary hover:underline">Terms</Link>{" "}
             and{" "}
             <Link to="/privacy" target="_blank" className="text-primary hover:underline">Privacy Policy</Link>,
@@ -306,9 +306,9 @@ function AuthPage() {
                     className="mt-0.5"
                   />
                   <Label htmlFor="su-terms" className="text-[11px] font-normal leading-snug text-muted-foreground">
-                    I understand that LaunchPad EIC's AI Coach provides general information only,
-                    not professional advice, and that I am responsible for my own decisions. I agree
-                    to the{" "}
+                    I'm 18 or older. I understand that LaunchPad EIC's AI Coach provides general
+                    information only, not professional advice, and that I am responsible for my own
+                    decisions. I agree to the{" "}
                     <Link to="/terms" target="_blank" className="text-primary hover:underline">
                       Terms of Service
                     </Link>{" "}

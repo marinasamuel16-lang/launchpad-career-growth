@@ -783,7 +783,7 @@ function Profile() {
           </DialogHeader>
           <div className="space-y-3 text-sm">
             <p className="text-muted-foreground">
-              This permanently deletes your profile, posts, roadmap, and all related data. This cannot be undone.
+              This permanently deletes your profile, goals, roadmap, check-ins, logged wins, AI Coach chats and everything else tied to your account, and cancels your Premium subscription if you have one. This cannot be undone.
             </p>
             <div className="space-y-1.5">
               <Label htmlFor="del-confirm" className="text-xs">Type <span className="font-mono font-semibold">DELETE</span> to confirm</Label>

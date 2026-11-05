@@ -7,10 +7,11 @@
  * recorded as accepting can never drift from the version they were shown —
  * which is the whole point of keeping a consent record.
  *
- * Bump this whenever either document changes materially, and consider
- * re-prompting existing users when you do.
+ * Bump this whenever either document changes materially. Anyone whose recorded
+ * version doesn't match is asked to agree again by <ConsentGate /> the next
+ * time they open the app.
  */
-export const LEGAL_VERSION = "2026-10-26";
+export const LEGAL_VERSION = "2026-11-05";
 
 /** Human-readable form of LEGAL_VERSION, for display on the legal pages. */
-export const LEGAL_VERSION_LABEL = "October 26, 2026";
+export const LEGAL_VERSION_LABEL = "November 5, 2026";

@@ -1,14 +1,22 @@
 /*
  * One place for every AI call the app makes (coach chat, roadmap, check-in
- * notes, Today's move, theme drafts).
+ * notes, Today's move, self-reviews, theme and playbook drafts).
  *
- * Uses Google's Gemini with our own key (GEMINI_API_KEY) — the same kind of key
- * Page & Spin uses. If the app is ever run on Lovable again, Lovable's AI
- * service (LOVABLE_API_KEY) still works as a fallback.
+ * Anything that carries a person's own data runs on Cloudflare Workers AI
+ * (the AI binding in wrangler.jsonc): free within Cloudflare's daily allowance,
+ * and Cloudflare doesn't train on it or keep it after answering.
+ *
+ * Google's Gemini (GEMINI_API_KEY) is only used for admin drafts built from
+ * public episode content (playbooks, weekly themes), where it can also watch the
+ * episode video. Gemini's free tier must never see personal data: Google may use
+ * free-tier prompts to improve its products. Set GEMINI_PAID_TIER=true only if
+ * billing is switched on for the key's Google project.
+ *
+ * If you change who handles personal data, update the Privacy Policy
+ * (src/routes/privacy.tsx) and bump LEGAL_VERSION.
  *
  * Server-only: keys never reach the browser.
  */
-
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
 /** status 0 = no AI key set up; otherwise the HTTP status the AI service returned. */
@@ -22,14 +30,34 @@ export class AiError extends Error {
   }
 }
 
+/** Cloudflare Workers AI binding, when running on Cloudflare. */
+type WorkersAi = { run(model: string, input: Record<string, unknown>): Promise<unknown> };
+
+function workersAi(): WorkersAi | null {
+  // Nitro's Cloudflare runtime puts the Worker's bindings on globalThis.__env__
+  // for each request.
+  const env = (globalThis as unknown as { __env__?: { AI?: WorkersAi } }).__env__;
+  const ai = env?.AI;
+  return ai && typeof ai.run === "function" ? ai : null;
+}
+
+function geminiKey(): string | undefined {
+  return process.env["GEMINI_API_KEY"]?.trim() || undefined;
+}
+
+const geminiPaid = () => process.env["GEMINI_PAID_TIER"] === "true";
+
 export function aiConfigured(): boolean {
-  return Boolean(process.env["GEMINI_API_KEY"]?.trim() || process.env["LOVABLE_API_KEY"]);
+  return Boolean(workersAi() || geminiKey());
 }
 
 /** Friendly wording for errors shown to people in the app. */
 export function aiErrorMessage(e: unknown): string {
   if (e instanceof AiError) {
     if (e.status === 0) return "The AI isn't set up yet. Please try again later.";
+    if (e.status === 429 && /daily/i.test(e.message)) {
+      return "The AI has reached today's limit — please try again tomorrow.";
+    }
     if (e.status === 429) return "Rate limit reached — try again in a minute.";
     if (e.status === 504) return "The AI took too long to answer — please send that again.";
     if (e.status >= 500) return "The AI is very busy right now — try again in a minute.";
@@ -49,6 +77,11 @@ export type ChatOptions = {
    * message (Gemini only). Used to draft episode playbooks.
    */
   youtubeUrl?: string;
+  /**
+   * True only when the request holds nothing but public episode content (no
+   * user's data at all). Only then may Gemini's free tier be used.
+   */
+  publicContentOnly?: boolean;
 };
 
 /**
@@ -56,11 +89,102 @@ export type ChatOptions = {
  * model is asked for a JSON object only (callers still validate it).
  */
 export async function chat(messages: ChatMessage[], opts: ChatOptions = {}): Promise<string> {
-  const gemini = process.env["GEMINI_API_KEY"]?.trim();
-  if (gemini) return geminiChat(gemini, messages, opts);
-  const lovable = process.env["LOVABLE_API_KEY"];
-  if (lovable) return lovableChat(lovable, messages, opts);
-  throw new AiError("No AI key configured (GEMINI_API_KEY)", 0);
+  const gemini = geminiKey();
+  const ai = workersAi();
+  const geminiAllowed = Boolean(gemini) && (opts.publicContentOnly || geminiPaid());
+
+  // Public episode content: Gemini first (it can watch the video, and it
+  // doesn't use up the daily Workers AI allowance students rely on).
+  if (geminiAllowed && (opts.publicContentOnly || !ai)) {
+    try {
+      return await geminiChat(gemini!, messages, opts);
+    } catch (e) {
+      if (!ai || opts.youtubeUrl) throw e;
+      console.warn("[AI] Gemini failed for a public-content draft, using Workers AI instead");
+    }
+  }
+  if (ai) return workersAiChat(ai, messages, opts);
+  throw new AiError("No AI provider configured", 0);
+}
+
+/*
+ * Cloudflare Workers AI. Llama 3.3 70B (fast) supports JSON mode. Free use is
+ * capped at 10,000 "neurons" a day across the account — roughly 30–50 requests
+ * of the size this app sends. Past that, requests fail until the next day
+ * (00:00 UTC) unless the account is on Workers Paid.
+ */
+const WORKERS_AI_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
+
+async function workersAiChat(
+  ai: WorkersAi,
+  messages: ChatMessage[],
+  { json, signal, totalMs = 40_000 }: ChatOptions,
+): Promise<string> {
+  // Llama wants one system message first, then alternating user/assistant turns.
+  const system = messages
+    .filter((m) => m.role === "system")
+    .map((m) => m.content)
+    .join("\n\n");
+  const turns: ChatMessage[] = [];
+  for (const m of messages) {
+    if (m.role === "system" || !m.content) continue;
+    const last = turns[turns.length - 1];
+    if (last && last.role === m.role) last.content += "\n\n" + m.content;
+    else turns.push({ role: m.role, content: m.content });
+  }
+  if (turns[0]?.role === "assistant") turns.unshift({ role: "user", content: "Hi" });
+  if (turns.length === 0) turns.push({ role: "user", content: "Hi" });
+  const jsonRule = json ? "\n\nRespond with a single valid JSON object only — no prose, no code fences." : "";
+
+  const run = async (useJsonMode: boolean): Promise<string> => {
+    const input: Record<string, unknown> = {
+      messages: [{ role: "system", content: (system || "You are a helpful assistant.") + jsonRule }, ...turns],
+      max_tokens: 2500,
+      temperature: 0.6,
+      ...(useJsonMode ? { response_format: { type: "json_object" } } : {}),
+    };
+    const started = Date.now();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new AiError("The AI took too long to answer", 504)), totalMs);
+    });
+    const cancelled = new Promise<never>((_, reject) => {
+      signal?.addEventListener("abort", () => reject(new AiError("Request cancelled", 499)), { once: true });
+    });
+    try {
+      const out = (await Promise.race([ai.run(WORKERS_AI_MODEL, input), timeout, cancelled])) as {
+        response?: unknown;
+      };
+      const r = out?.response;
+      const text = (typeof r === "string" ? r : r != null ? JSON.stringify(r) : "").trim();
+      console.log(`[AI] Workers AI answered in ${Date.now() - started}ms`);
+      return text;
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
+  try {
+    let text = await run(Boolean(json)).catch(async (e) => {
+      // "JSON Mode couldn't be met": ask again without it and pull the JSON out.
+      if (json && /json mode/i.test(String((e as Error)?.message))) return run(false);
+      throw e;
+    });
+    if (json) {
+      const start = text.indexOf("{");
+      const end = text.lastIndexOf("}");
+      if (start >= 0 && end > start) text = text.slice(start, end + 1);
+    }
+    if (!text) throw new AiError("Workers AI sent an empty answer", 502);
+    return text;
+  } catch (e) {
+    if (e instanceof AiError) throw e;
+    const msg = String((e as Error)?.message ?? e);
+    console.error("[AI] Workers AI failed:", msg.slice(0, 300));
+    if (/neuron|daily|quota|limit/i.test(msg)) throw new AiError("Workers AI daily limit reached", 429);
+    if (/capacity|overloaded|busy|429/i.test(msg)) throw new AiError("Workers AI is busy", 503);
+    throw new AiError("Workers AI request failed", 502);
+  }
 }
 
 /*
@@ -248,27 +372,4 @@ async function geminiChat(
   }
   console.error(`[AI] no Gemini model answered in time (last answer ${lastStatus})`);
   throw new AiError("No Gemini model available", lastStatus === 404 ? 503 : lastStatus);
-}
-
-async function lovableChat(
-  apiKey: string,
-  messages: ChatMessage[],
-  { json, signal }: { json?: boolean; signal?: AbortSignal },
-): Promise<string> {
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    signal,
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages,
-      ...(json ? { response_format: { type: "json_object" } } : {}),
-    }),
-  });
-  if (!res.ok) {
-    console.error(`[AI] Lovable AI responded ${res.status}:`, (await res.text()).slice(0, 300));
-    throw new AiError(`Lovable AI responded ${res.status}`, res.status);
-  }
-  const out = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-  return out.choices?.[0]?.message?.content ?? "";
 }

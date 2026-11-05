@@ -401,7 +401,7 @@ export const draftPlaybookFn = createServerFn({ method: "POST" })
     }
 
     const { chat, aiConfigured, aiErrorMessage } = await import("@/lib/ai.server");
-    if (!aiConfigured()) throw new Error("The AI isn't set up yet (GEMINI_API_KEY).");
+    if (!aiConfigured()) throw new Error("The AI isn't set up yet.");
 
     const useVideo = !data.transcript && !!data.youtubeVideoId;
     let text: string;
@@ -426,8 +426,9 @@ export const draftPlaybookFn = createServerFn({ method: "POST" })
               // Watching a whole episode takes a while.
               totalMs: 240_000,
               perModelMs: 120_000,
+              publicContentOnly: true,
             }
-          : { json: true, totalMs: 90_000, perModelMs: 40_000 },
+          : { json: true, totalMs: 90_000, perModelMs: 40_000, publicContentOnly: true },
       );
     } catch (e) {
       const msg = aiErrorMessage(e);

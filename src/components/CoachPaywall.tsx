@@ -77,7 +77,8 @@ export function CoachPaywall({
               <span className="pb-1 text-sm text-muted-foreground">/month</span>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Cancel anytime. Everything else in LaunchPad stays free.
+              Renews automatically every month until you cancel. Cancel anytime in Profile →
+              Settings → Manage billing. Everything else in LaunchPad stays free.
             </p>
           </div>
 

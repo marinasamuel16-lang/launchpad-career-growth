@@ -138,7 +138,7 @@ async function extractMemories(args: {
 
   const { chat, aiConfigured } = await import("@/lib/ai.server");
   if (!aiConfigured()) {
-    console.warn("[checkin] no AI key configured (GEMINI_API_KEY) — skipping extraction");
+    console.warn("[checkin] no AI configured — skipping extraction");
     return [];
   }
 

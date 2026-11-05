@@ -51,10 +51,10 @@ function TermsPage() {
           <section className="space-y-2">
             <h2 className="text-lg font-semibold">1. The short version</h2>
             <p>
-              LaunchPad EIC is a career growth app for people roughly 1–10 years into their careers.
-              You get an AI Coach, a career roadmap, video episodes, and a community feed. It's a
-              tool to help you think — it is not a professional advisor, and it can't promise you a
-              job, a raise, or a promotion.
+              LaunchPad EIC is a career growth app for people early in their careers. You get a
+              daily career move, a career roadmap, weekly actions, an AI Coach, and video episodes
+              from leaders. It's a tool to help you think — it is not a professional advisor, and it
+              can't promise you a job, a raise, or a promotion.
             </p>
           </section>
 
@@ -90,7 +90,7 @@ function TermsPage() {
           <section className="space-y-2">
             <h2 className="text-lg font-semibold">3. No guaranteed outcomes</h2>
             <p>
-              We don't promise results. Completing milestones, earning XP, following action steps,
+              We don't promise results. Completing milestones, building your LaunchScore, following action steps,
               or chatting with the AI Coach does not guarantee a job offer, an interview, a
               promotion, a raise, or any other career outcome. Your results depend on you, your
               employer, your market, and plenty of things none of us control.
@@ -100,7 +100,7 @@ function TermsPage() {
           <section className="space-y-2">
             <h2 className="text-lg font-semibold">4. What you create is yours</h2>
             <p>
-              Your roadmap, your milestones and tasks, your weekly action steps, and your
+              Your goals, roadmap, daily check-ins, logged wins, self-reviews, weekly actions, and
               conversations with the AI Coach belong to you. They are private to your account — no
               other user of LaunchPad EIC can see them. We store them so the app works and so your
               history is there when you come back, and we delete them when you delete your account.
@@ -146,7 +146,9 @@ function TermsPage() {
           <section className="space-y-2">
             <h2 className="text-lg font-semibold">7. Your account</h2>
             <p>
-              You need to be at least 16 years old to use LaunchPad EIC. Keep your login details
+              You need to be at least 18 years old to use LaunchPad EIC. If you're under 18, please
+              don't create an account; if we learn that someone under 18 has one, we'll delete it.
+              Keep your login details
               secure — you're responsible for activity under your account. Tell us promptly if you
               think someone else has access. Give us accurate information when you sign up.
             </p>
@@ -155,10 +157,13 @@ function TermsPage() {
           <section className="space-y-2">
             <h2 className="text-lg font-semibold">8. Paid features</h2>
             <p>
-              Some AI features may be offered as a paid subscription. Pricing, billing terms, and
-              renewal details are shown at the point of purchase and billed through our payment
-              processor. Subscriptions renew automatically until cancelled; you can cancel any time
-              and keep access until the end of the period you've paid for. Fees already paid are
+              Most of LaunchPad EIC is free. <strong>LaunchPad Premium</strong> costs $4.99 a month
+              (plus any tax that applies) and adds extra AI features and members-only content. It is
+              billed through our payment processor, Stripe, and{" "}
+              <strong>renews automatically every month until you cancel</strong>. You can cancel any
+              time in Profile → Settings → Manage billing and keep Premium until the end of the month
+              you've paid for. Deleting your account cancels Premium automatically. If we change the
+              price, we'll tell you before you're charged the new price. Fees already paid are
               non-refundable except where the law requires otherwise or where we have failed to
               provide the Service.
             </p>
@@ -194,8 +199,8 @@ function TermsPage() {
               are not liable for any indirect, incidental, special, consequential, exemplary, or
               punitive damages, or for any lost profits, lost wages, lost job or business
               opportunities, lost data, or reputational harm, arising out of or related to your use
-              of the app — including decisions you make based on AI Coach output, roadmap content,
-              or anything another user posts.
+              of the app — including decisions you make based on AI Coach output or roadmap
+              content.
             </p>
             <p>
               For individual consumer users, our total liability for any claim relating to the app

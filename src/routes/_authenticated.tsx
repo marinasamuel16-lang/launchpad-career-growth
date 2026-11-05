@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+import { ConsentGate } from "@/components/ConsentGate";
 
 // ssr: false ensures protected HTML is never streamed to unauthenticated viewers.
 // The beforeLoad gate runs client-side and redirects to /auth before render.
@@ -27,5 +28,10 @@ export const Route = createFileRoute("/_authenticated")({
 
     return { user };
   },
-  component: () => <Outlet />,
+  component: () => (
+    <>
+      <Outlet />
+      <ConsentGate />
+    </>
+  ),
 });
