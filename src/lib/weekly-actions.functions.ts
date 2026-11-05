@@ -190,7 +190,7 @@ export const draftThemeFn = createServerFn({ method: "POST" })
     if (!role) throw new Error("Admins only.");
 
     const { chat, aiConfigured, aiErrorMessage } = await import("@/lib/ai.server");
-    if (!aiConfigured()) throw new Error("The AI isn't set up yet (GEMINI_API_KEY).");
+    if (!aiConfigured()) throw new Error("The AI isn't set up yet.");
 
     const prompt = `Below is the description or transcript of one episode of LaunchPad EIC, a career podcast for people 1-10 years into their careers. Turn it into a weekly theme with actions.
 
@@ -222,7 +222,8 @@ Respond ONLY with JSON, no prose:
             { role: "system", content: "You are a sharp career editor. Respond with valid JSON only." },
             { role: "user", content: prompt },
           ],
-          { json: true },
+          // Built only from the episode the admin pasted in: no user data.
+          { json: true, publicContentOnly: true },
         )) || "{}";
     } catch (e) {
       throw new Error(aiErrorMessage(e));

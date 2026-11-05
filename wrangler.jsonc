@@ -4,4 +4,6 @@
   "compatibility_date": "2025-09-24",
   "compatibility_flags": ["nodejs_compat"],
   "main": "src/server.ts",
+  // Workers AI: runs every AI feature that touches a person's data (see src/lib/ai.server.ts).
+  "ai": { "binding": "AI" },
 }

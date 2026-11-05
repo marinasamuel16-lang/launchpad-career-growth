@@ -35,14 +35,17 @@ Companion to HECVAT 4. Prepared for institutional vendor review.
 
 Single-page React application (TanStack Start) served from Cloudflare Workers,
 backed by Supabase (managed PostgreSQL, authentication, and object storage).
-Payments through Stripe Checkout. AI inference through Google's Gemini API,
-called directly with our own key. (Moved off Lovable's hosting on Oct 26, 2026.)
+Payments through Stripe Checkout. AI inference for anything involving a user's
+data runs on Cloudflare Workers AI, inside the same Cloudflare account that hosts
+the app (since Nov 5, 2026). Google's Gemini API is used only for admin drafts
+built from public episode content. (Moved off Lovable's hosting on Oct 26, 2026.)
 
 | Component | Provider | Region | Handles |
 |---|---|---|---|
 | Application hosting | Cloudflare Workers | Global edge | Requests; no persistent user data |
 | Database, auth, storage | Supabase (AWS) | United States — US East (Virginia) | All application data |
-| AI inference | Google Gemini API (Google LLC) | Google's global infrastructure | Prompt + profile/roadmap context |
+| AI inference (user data) | Cloudflare Workers AI (Meta Llama 3.3 70B) | Cloudflare's network | Prompt + profile/career context; not retained after the response |
+| AI drafts (public content only) | Google Gemini API (Google LLC) | Google's global infrastructure | Public episode videos/transcripts; no user data |
 | Payments | Stripe | US | Card data — **never touches our systems** |
 | Video | YouTube (public channel) | Global | Public content only |
 
@@ -58,9 +61,9 @@ application code.
   `coach_messages`, `milestones`, `milestone_tasks`, `action_steps`,
   `notifications`, `xp_events`, `subscriptions`, `ai_usage`, `career_journey`,
   `personalized_actions`, `user_action_completions` — is restricted to
-  `auth.uid() = user_id`. Social data — `posts`, `comments`, `follows`,
-  `post_likes`, `post_reposts`, `profiles` — is readable by authenticated users
-  only and writable only by its owner. Nothing is readable anonymously.
+  `auth.uid() = user_id`. `profiles` is readable only by its owner. The old
+  social-feed tables (`posts`, `comments`, `follows`, `post_likes`,
+  `post_reposts`) are no longer used by the app. Nothing is readable anonymously.
 - **The `profiles` table contains no email address.** Contact details live only in
   `auth.users`, which application clients cannot read. A signed-in user cannot
   enumerate other users' email addresses.
@@ -131,10 +134,10 @@ HECVAT 4 added a dedicated AI section in February 2025. Expect these questions.
 | Question | Answer |
 |---|---|
 | Does the product use AI? | Yes. An AI career coach and a roadmap generator. |
-| Model and provider | Google Gemini (Flash), called directly through Google's Gemini API. |
-| What data is sent | The user's message, plus their profile fields (role, industry, years of experience, career goal) and their roadmap. |
-| Is institutional data used for training? | **We don't train on it. Whether Google may use it depends on the Gemini API tier — on the paid tier Google's terms say it isn't used to improve its products; on the free tier it can be. [Confirm the key's Google project is on the paid tier before answering, and attach Google's terms. The public Privacy Policy deliberately makes no promise about Google.]** |
-| Retention by the provider | **[CONFIRM from Google's Gemini API terms]** |
+| Model and provider | Meta Llama 3.3 70B, run on Cloudflare Workers AI. |
+| What data is sent | The user's message, plus the profile and career data the feature needs (role, industry, years of experience, career goal, goals, roadmap, recent check-ins and logged wins). |
+| Is institutional data used for training? | No. We don't train on it, and Cloudflare's Workers AI terms say it doesn't use customer content to train AI models (developers.cloudflare.com/workers-ai/platform/privacy/). |
+| Retention by the provider | None for standard requests: Cloudflare doesn't keep inputs or outputs once the response is returned (same page). |
 | Human review of outputs | No. Outputs go straight to the user, labelled as AI-generated. |
 | Automated decision-making | None with legal or similarly significant effect. No screening, scoring, ranking, or eligibility determination. |
 | User disclosure | Disclosed in the Privacy Policy, in the Terms, at signup via a required acknowledgement checkbox, and persistently at the point of use on the Coach screen. |
