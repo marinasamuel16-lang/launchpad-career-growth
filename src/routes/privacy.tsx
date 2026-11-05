@@ -83,7 +83,10 @@ function PrivacyPage() {
             <p>
               Your email address and password (stored hashed by our sign-in provider), or — if you
               sign in with Google — your Google account email and the basic profile details Google
-              shares with us. We never see your Google password.
+              shares with us. We never see your Google password. When you choose a password, your
+              browser checks it against Have I Been Pwned's public list of passwords exposed in
+              other sites' data breaches. Only the first 5 characters of a scrambled version of the
+              password are sent; the password itself never leaves your device.
             </p>
             <p className="font-medium">Profile information you enter</p>
             <p>

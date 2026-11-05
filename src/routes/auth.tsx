@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { LEGAL_VERSION } from "@/lib/legal";
+import { BREACHED_PASSWORD_MESSAGE, isPasswordBreached } from "@/lib/pwned";
 import logo from "@/assets/logo.png";
 
 export const Route = createFileRoute("/auth")({
@@ -76,6 +77,11 @@ function AuthPage() {
     }
     setSignUpErrors({});
     setSubmitting(true);
+    if ((await isPasswordBreached(parsed.data.password)) === true) {
+      setSubmitting(false);
+      setSignUpErrors({ password: BREACHED_PASSWORD_MESSAGE });
+      return;
+    }
     const { data: signUpData, error } = await supabase.auth.signUp({
       email: parsed.data.email,
       password: parsed.data.password,

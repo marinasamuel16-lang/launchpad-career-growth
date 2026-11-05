@@ -32,6 +32,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { awardXp, revokeXp, levelForXp, progressToNextLevel, todayISO } from "@/lib/gamification";
 import { generateRoadmap } from "@/lib/ai-coach.functions";
 import { deleteAccount } from "@/lib/account.functions";
+import { BREACHED_PASSWORD_MESSAGE, isPasswordBreached } from "@/lib/pwned";
 import { createPortalSession } from "@/lib/stripe.functions";
 import { cn } from "@/lib/utils";
 
@@ -720,12 +721,17 @@ function Profile() {
             <div className="space-y-2">
               <Label htmlFor="set-pw" className="flex items-center gap-1.5 text-xs"><KeyRound className="h-3.5 w-3.5" /> Change password</Label>
               <div className="flex gap-2">
-                <Input id="set-pw" type="password" placeholder="New password (min 6)" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} minLength={6} />
+                <Input id="set-pw" type="password" placeholder="New password (min 8)" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} minLength={8} maxLength={72} />
                 <Button
                   size="sm"
-                  disabled={savingPassword || newPassword.length < 6}
+                  disabled={savingPassword || newPassword.length < 8}
                   onClick={async () => {
                     setSavingPassword(true);
+                    if ((await isPasswordBreached(newPassword)) === true) {
+                      setSavingPassword(false);
+                      toast.error(BREACHED_PASSWORD_MESSAGE);
+                      return;
+                    }
                     const { error } = await supabase.auth.updateUser({ password: newPassword });
                     setSavingPassword(false);
                     if (error) { toast.error(error.message); return; }
